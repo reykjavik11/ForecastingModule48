@@ -1,1 +1,13 @@
-bin/Debug
+# Build Folders
+bin/
+obj/
+Properties/PublishProfiles
+
+
+# Visual Studio Files
+.vs/
+*.csproj.user
+
+# Logs and Temporary Files
+*.log
+*.tmp

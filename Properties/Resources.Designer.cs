@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ForecastingModule48.Properties
+namespace ForecastingModule.Properties
 {
 
 
