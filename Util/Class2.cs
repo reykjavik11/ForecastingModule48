@@ -42,7 +42,11 @@ namespace ForecastingModule.Utilities
                     using (var command = new SqlCommand(query, connection))
                     using (var reader = command.ExecuteReader())
                     {
-                        dataTable.Load(reader);
+                        while (reader.Read())
+                        {
+                            log.LogInfo($"Row: {reader["USR_UserName"]}, {reader["USR_Access_OperationsPlanning"]}");
+                        }
+                        //dataTable.Load(reader);
                     }
                 }
 

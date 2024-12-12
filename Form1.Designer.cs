@@ -202,7 +202,8 @@ namespace ForecastingModule
                 {
                     try
                     {
-                        db.ExecuteMySqlQuery("SELECT U.user_name, U.device_id FROM user U");
+                        //db.ExecuteMySqlQuery("SELECT U.user_name, U.device_id FROM user U");
+                        db.ExecuteQuery("select USR_UserName, USR_Access_OperationsPlanning FROM [WeilerForecasting].[dbo].[Users]");
                         Invoke((Action)(() =>
                         {
                             this.statusLabel.Text = "Query been runed.";
