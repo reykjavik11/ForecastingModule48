@@ -21,7 +21,7 @@ namespace ForecastingModule
         public readonly Font TEXT_FONT = new Font("Arial", 9, FontStyle.Bold);
 
         private readonly Logger log = Logger.Instance;
-        private readonly ConfigFileManager config = ConfigFileManager.Instance;
+        private readonly ConfigFileManager config = ConfigFileManager.Instance;        
 
         private readonly DatabaseHelper db = DatabaseHelper.Instance;
 

@@ -1,13 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using ForecastingModule.OtherForm;
+using ForecastingModule.Util;
+using ForecastingModule.Utilities;
 
 namespace ForecastingModule
 {
     static class Program
     {
+        private static readonly Logger log = Logger.Instance;
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
@@ -16,7 +17,43 @@ namespace ForecastingModule
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            try
+            {
+                using (LoginForm loginForm = new LoginForm())
+                {
+                    if (loginForm.ShowDialog() == DialogResult.OK)
+                    {
+                        Form1 mainForm = new Form1();
+
+                        logSuccessLogIn(loginForm);
+
+                        writeToConfigIfUserNotInConfigFile(loginForm);
+
+                        Application.Run(mainForm);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex.StackTrace);
+            }
+        }
+
+        private static void logSuccessLogIn(LoginForm loginForm)
+        {
+            log.LogInfo($"User: {loginForm.userName} has been loged successfully.");
+        }
+
+        private static void writeToConfigIfUserNotInConfigFile(LoginForm loginForm)
+        {
+            ConfigFileManager config = ConfigFileManager.Instance;
+            string userFromConfig = config.Read(ConfigFileManager.KEY_USER) as string;
+
+            bool noUserInConfigFile = string.IsNullOrEmpty(userFromConfig) || string.IsNullOrWhiteSpace(userFromConfig.Trim());
+            if (noUserInConfigFile)
+            {
+                config.Write(ConfigFileManager.KEY_USER, loginForm.userName);
+            }
         }
     }
 }

@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ForecastingModule.Util;
-using MySql.Data.MySqlClient;
-using Serilog.Core;
+using System.Data.SqlClient;
 using ForecastingModule.exception;
+using ForecastingModule.Util;
 
 namespace ForecastingModule.Utilities
 {
@@ -56,55 +50,6 @@ namespace ForecastingModule.Utilities
             catch (Exception ex)
             {
                 log.LogError($"{ex.StackTrace}\n Query: {query}");
-                throw new DBException(ex.Message);
-            }
-            return dataTable;
-        }
-
-        /*
-         * TODO - Test connection to MySql
-        */
-        public DataTable ExecuteMySqlQuery(string query)
-        {
-            var dataTable = new DataTable();
-            try
-            {
-                var startDate = DateTime.Now;
-                log.LogInfo("Connected to MySQL database!");
-
-                using (var connection = new MySqlConnection(ConnectionString))
-                {
-                    try
-                    {
-                        connection.Open();
-
-                        using (var command = new MySqlCommand(query, connection))
-                        using (var reader = command.ExecuteReader())
-                        {
-                            //dataTable.Load(reader);
-                            while (reader.Read())
-                            {
-                                log.LogInfo($"Row: {reader["user_name"]}, {reader["device_id"]}");
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        log.LogError($"Error: {ex.Message}");
-                    }
-                    finally
-                    {
-                        connection.Close();
-                        log.LogInfo("MySqlConnection is closed.");
-                    }
-                }
-
-                var endDate = DateTime.Now;
-                LogWhenExceed(query, startDate, endDate);
-            }
-            catch (Exception ex)
-            {
-                log.LogError($"{ex.StackTrace}");
                 throw new DBException(ex.Message);
             }
             return dataTable;

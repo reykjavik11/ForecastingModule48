@@ -1,14 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
-using ForecastingModule.Util;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace ForecastingModule
 {
@@ -30,9 +21,7 @@ namespace ForecastingModule
             InitializeComponent();
             this.Load += mainFormLoad;
 
-            string user = !string.IsNullOrEmpty(config.Read(ConfigFileManager.KEY_USER) as string)
-                ? config.Read(ConfigFileManager.KEY_USER) as string : "is not defined.";
-            log.LogInfo("Application has been started - user: " + user);
+            log.LogInfo("Application has been started.");
         }
     }
 }
