@@ -24,6 +24,21 @@ namespace ForecastingModule.Helper
                 }
             }
         }
+        
+        public void Update(TKey key, TValue value, TValue oldValue)
+        {
+            lock (_lock)
+            {
+                if (_keys.Contains(key))
+                {
+                    _dictionary.TryUpdate(key, value, oldValue);
+                }
+                else
+                {
+                    throw new ArgumentException("Can not update. Key does not exists.");
+                }
+            }
+        }
 
         public bool Remove(TKey key, out TValue value)
         {
