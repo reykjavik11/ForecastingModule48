@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
 
-namespace ForecastingModule.Util
+namespace ForecastingModule.Helper
 {
     public sealed class ConfigFileManager
     {

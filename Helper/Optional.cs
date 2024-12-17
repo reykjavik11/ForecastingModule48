@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace ForecastingModule.Util
+namespace ForecastingModule.Helper
 {
     public class Optional<T>
     {

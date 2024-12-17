@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using ForecastingModule.OtherForm;
-using ForecastingModule.Util;
+using ForecastingModule.Helper;
 using ForecastingModule.Utilities;
 
 namespace ForecastingModule

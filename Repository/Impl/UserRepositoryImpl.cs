@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Data.SqlClient;
 using ForecastingModule.Model;
-using ForecastingModule.Util;
+using ForecastingModule.Helper;
 using ForecastingModule.Utilities;
 
 namespace ForecastingModule.Repository.Impl

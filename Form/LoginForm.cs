@@ -3,7 +3,7 @@ using System.Drawing;
 using System.Net;
 using System.Windows.Forms;
 using ForecastingModule.Service.Impl;
-using ForecastingModule.Util;
+using ForecastingModule.Helper;
 
 namespace ForecastingModule.OtherForm
 {

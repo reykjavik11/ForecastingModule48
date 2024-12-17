@@ -14,12 +14,12 @@ namespace ForecastingModule.Service.Impl
         }
         public bool findUserByName(string userName)
         {
-            Util.Optional<Model.UserDto> optionalUser = repository.findUserByName(userName);
+            Helper.Optional<Model.UserDto> optionalUser = repository.findUserByName(userName);
             setSessionUser(optionalUser);
             return optionalUser.HasValue;
         }
 
-        private static void setSessionUser(Util.Optional<Model.UserDto> optionalUser)
+        private static void setSessionUser(Helper.Optional<Model.UserDto> optionalUser)
         {
             if (optionalUser.HasValue)
             {
