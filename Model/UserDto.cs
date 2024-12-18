@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ForecastingModule.Model
 {
@@ -16,5 +12,17 @@ namespace ForecastingModule.Model
         public bool accessManage { get; set; }
         public bool activeFlag { get; set; }
 
+        public override string ToString()
+        {
+            return "{" 
+                + $"userName: {userName},"
+                + $"accessOperationsPlanning: {accessOperationsPlanning},"
+                + $"accessForecast: {accessForecast},"
+                + $"accessOperationsSettings: {accessOperationsSettings},"
+                + $"accessForecastSettings: {accessForecastSettings},"
+                + $"accessManage: {accessManage},"
+                + $"activeFlag: {activeFlag}"
+                + "}";
+        }
     }
 }

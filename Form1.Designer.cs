@@ -8,6 +8,9 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System;
+using ForecastingModule.Service;
+using ForecastingModule.Repository.Impl;
+using System.Linq;
 
 namespace ForecastingModule
 {
@@ -27,8 +30,8 @@ namespace ForecastingModule
 
         ///  Required designer variable.
         private System.ComponentModel.IContainer components = null;
-        List<string> tabNameList = new List<string> { "E1050", "E1250C", "E1650A", "E2850C", "E2860C" };//should be dynamic retrive from models (equuipment "MTV" -> "E1050", "E1250C", "E1650A", "E2850C", "E2860C")
-
+        private List<string> tabList = new List<string>();
+        private List<string> subTabNameList = new List<string> { "E1050", "E1250C", "E1650A", "E2850C", "E2860C" };
         /// <summary>
         ///  Clean up any resources being used.
         /// </summary>
@@ -59,11 +62,34 @@ namespace ForecastingModule
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
             Name = "Form1";
-            Text = "Forecasting Module";
+            Text = $"Forecasting Module - [ {UserSession.GetInstance().User.userName} ]";
             ResumeLayout(false);
+
+            populateTabList();
 
             InitializeInnerComponent();
             this.FormClosing += Form_Closing;
+
+
+        }
+
+        private void populateTabList()
+        {
+            try
+            {
+                log.LogInfo($"Loaded dymanic Tabs from [TAB_DisplayOrder]: {string.Join(", ", tabList)}");
+
+                tabList.Add("OPERATIONS PLANNING");
+                tabList.AddRange(TabRepositoryImpl.Instance.getActiveTabs());
+
+                tabList = new HashSet<string>(tabList).ToList();//cover the case with duplication - avoid duplication
+
+                tabList.Reverse();
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex.StackTrace);
+            }
         }
 
         private void Form_Closing(object sender, FormClosingEventArgs e)
@@ -82,7 +108,7 @@ namespace ForecastingModule
             };
 
             // Left Panel - Dynamicly Generated Buttons
-            GenerateMenuButtons(new List<string> { "MTV", "BROOM", "STABILIZER" });
+            GenerateMenuButtons(tabList);
 
             // Right Panel - Tabs and other elements
             tabControl = new TabControl
@@ -122,6 +148,11 @@ namespace ForecastingModule
 
         private void GenerateMenuButtons(List<string> list)
         {
+            Panel scrollPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true
+            };
             int buttonHeight = 50;
             foreach (string label in list)
             {
@@ -131,11 +162,17 @@ namespace ForecastingModule
                     Dock = DockStyle.Top,
                     Height = buttonHeight,
                     Tag = label, //Store label or identifier in Tag
-                    Font = TEXT_FONT
+                    Font = TEXT_FONT,
                 };
+                button.FlatAppearance.BorderColor = Color.DarkSeaGreen;
+                button.FlatAppearance.BorderSize = 1;
+                
+                button.TabStop = false;//Prevent highlight (looks selection) on last button
+                                       //
                 button.Click += OnMenuButtonClick;
-                splitContainer.Panel1.Controls.Add(button);
+                scrollPanel.Controls.Add(button);
             }
+            splitContainer.Panel1.Controls.Add(scrollPanel);
         }
 
         private void OnMenuButtonClick(object sender, EventArgs e)
@@ -144,6 +181,9 @@ namespace ForecastingModule
             {
                 this.statusLabel.Text = string.Empty;
                 this.statusLabel.ForeColor = Color.LimeGreen;
+
+                ((Control)button).Focus();
+
                 string label = button.Text;
                 AddTab(label);
             }
@@ -168,9 +208,9 @@ namespace ForecastingModule
 
             if (menuName == "MTV" && tabControl.TabPages.Count == 0)
             {
-                List<TabPage> tabList = new List<TabPage>(tabNameList.Count);
+                List<TabPage> tabList = new List<TabPage>(subTabNameList.Count);
 
-                foreach (var tabName in tabNameList)
+                foreach (var tabName in subTabNameList)
                 {
                     var mtvTab = new TabPage(tabName);
                     var dataGridView = new DataGridView

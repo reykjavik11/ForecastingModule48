@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using ForecastingModule.OtherForm;
 using ForecastingModule.Helper;
 using ForecastingModule.Utilities;
+using ForecastingModule.Util;
 
 namespace ForecastingModule
 {
@@ -42,6 +43,7 @@ namespace ForecastingModule
         private static void logSuccessLogIn(LoginForm loginForm)
         {
             log.LogInfo($"User: {loginForm.userName} has been loged successfully.");
+            log.LogInfo($"Machine Net Address: {SytemInfo.getIPAdress()} and computer name {SytemInfo.getMachineName()}");
         }
 
         private static void writeToConfigIfUserNotInConfigFile(LoginForm loginForm)

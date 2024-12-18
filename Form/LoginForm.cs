@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Drawing;
-using System.Net;
 using System.Windows.Forms;
-using ForecastingModule.Service.Impl;
 using ForecastingModule.Helper;
+using ForecastingModule.Model;
+using ForecastingModule.Service;
+using ForecastingModule.Service.Impl;
+using ForecastingModule.Util;
 
 namespace ForecastingModule.OtherForm
 {
@@ -21,8 +23,7 @@ namespace ForecastingModule.OtherForm
         {
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
-            //LOG_USER_STRING = $"Machine IP {Dns.GetHostAddresses(Dns.GetHostName())} and computer name {System.Environment.MachineName}";
-            LOG_USER_STRING = $"Machine Net Address: {getIPAdress()} and computer name {System.Environment.MachineName}";
+            LOG_USER_STRING = $"Machine Net Address: {SytemInfo.getIPAdress()} and computer name {SytemInfo.getMachineName()}";
             //Set form properties
             this.Text = "Login";
             this.Size = new Size(300, WIDTH);
@@ -93,6 +94,8 @@ namespace ForecastingModule.OtherForm
                     if (UserServiceImpl.Instance.findUserByName(this.txtUserName.Text))
                     {
                         this.DialogResult = DialogResult.OK;
+                        UserDto user = UserSession.GetInstance().User;
+                        log.LogInfo($"User {user.userName} permission: {user}");
                     } else
                     {
                         MessageBox.Show($"User '{this.txtUserName.Text}' does not exist.", "Invalid Login", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -115,18 +118,6 @@ namespace ForecastingModule.OtherForm
             this.Close();
         }
 
-        private static string getIPAdress()
-        {
-            IPAddress[] hostAddresses = Dns.GetHostAddresses(Dns.GetHostName());
-
-            // Manually convert to string
-            string[] addressStrings = new string[hostAddresses.Length];
-            for (int i = 0; i < hostAddresses.Length; i++)
-            {
-                addressStrings[i] = hostAddresses[i].ToString();
-            }
-
-            return string.Join(", ", addressStrings);
-        }
+       
     }
 }
