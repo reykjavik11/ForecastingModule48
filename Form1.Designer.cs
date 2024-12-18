@@ -1,21 +1,23 @@
-﻿using ForecastingModule.Helper;
-using ForecastingModule.Utilities;
-using OfficeOpenXml;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System;
-using ForecastingModule.Service;
+using ForecastingModule.Helper;
 using ForecastingModule.Repository.Impl;
-using System.Linq;
+using ForecastingModule.Service;
+using ForecastingModule.Utilities;
+using OfficeOpenXml;
 
 namespace ForecastingModule
 {
     partial class Form1
     {
+        private const string ITEM_OPERATION_PLANNING = "OPERATIONS PLANNING";
+        private const string ITEM_MANANGE = "MANAGE";
         private SplitContainer splitContainer;
         private TabControl tabControl;
         private DataGridView testDataGridView;
@@ -79,8 +81,9 @@ namespace ForecastingModule
             {
                 log.LogInfo($"Loaded dymanic Tabs from [TAB_DisplayOrder]: {string.Join(", ", tabList)}");
 
-                tabList.Add("OPERATIONS PLANNING");
+                tabList.Add(ITEM_OPERATION_PLANNING);
                 tabList.AddRange(TabRepositoryImpl.Instance.getActiveTabs());
+                tabList.Add(ITEM_MANANGE);
 
                 tabList = new HashSet<string>(tabList).ToList();//cover the case with duplication - avoid duplication
 
@@ -113,7 +116,8 @@ namespace ForecastingModule
             // Right Panel - Tabs and other elements
             tabControl = new TabControl
             {
-                Dock = DockStyle.Fill
+                Dock = DockStyle.Fill,
+                //Alignment = System.Windows.Forms.TabAlignment.Bottom //Uncoment when need same desiign like in task, but Top aligment (as is) is user friendly
             };
             splitContainer.Panel2.Controls.Add(tabControl);
             splitContainer.Panel2.Controls.Add(createStatusStrip());
@@ -202,11 +206,112 @@ namespace ForecastingModule
             }
 
             // Create a new tab page
-            var tabPage = new TabPage(menuName);
+            //var tabPage = new TabPage(menuName);
 
             clearTabsAndContents();
 
-            if (menuName == "MTV" && tabControl.TabPages.Count == 0)
+            if(menuName == ITEM_OPERATION_PLANNING)
+            {
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        List<string> operationSubTabs = SubTabRepositoryOperationsImpl.Instance.getActiveSubTabs();
+
+                        Invoke((Action)(() =>
+                        {
+                            List<TabPage> tabList = new List<TabPage>(operationSubTabs.Count);
+                            foreach (var tabName in operationSubTabs)
+                            {
+                                var mtvTab = new TabPage(tabName);
+
+                                tabControl.TabPages.Add(mtvTab);
+
+                                tabList.Add(mtvTab);
+
+                                mtvTab.GotFocus += OnSelectOperationSubTab;
+                            }
+
+                            var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
+                            if (firstSubTab != null)
+                            {
+                                tabControl.SelectedTab = firstSubTab; // Focus the new tab
+                            }
+                        }));
+                    }
+                    catch (Exception ex)
+                    {
+                        Invoke((Action)(() =>
+                        {
+                            this.log.LogError(ex.Message);
+                            MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            this.statusLabel.Text = "Method getActiveSubTabs failed.";
+                            this.statusLabel.ForeColor = Color.Red;
+                            return;
+                        }));
+                    }
+                });
+
+                //operationSubTabs = SubTabRepositoryOperationsImpl.Instance.getActiveSubTabs();
+                //List<TabPage> tabList = new List<TabPage>(operationSubTabs.Count);
+                //foreach (var tabName in operationSubTabs)
+                //{
+                //    var mtvTab = new TabPage(tabName);
+
+                //    tabControl.TabPages.Add(mtvTab);
+
+                //    tabList.Add(mtvTab);
+
+                //    mtvTab.GotFocus += OnSelectOperationSubTab;
+                //}
+
+                //var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
+                //if (firstSubTab != null)
+                //{
+                //    tabControl.SelectedTab = firstSubTab; // Focus the new tab
+                //}
+            } else {
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        List<string> forecastSubTabs = SubTabRepositoryForecastImpl.Instance.getActiveSubTabs(menuName);
+
+                        Invoke((Action)(() =>
+                        {
+                            List<TabPage> tabList = new List<TabPage>(forecastSubTabs.Count);
+                            foreach (var tabName in forecastSubTabs)
+                            {
+                                var mtvTab = new TabPage(tabName);
+
+                                tabControl.TabPages.Add(mtvTab);
+
+                                tabList.Add(mtvTab);
+
+                                mtvTab.GotFocus += OnSelectOperationSubTab;
+                            }
+
+                            var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
+                            if (firstSubTab != null)
+                            {
+                                tabControl.SelectedTab = firstSubTab; // Focus the new tab
+                            }
+                        }));
+                    }
+                    catch (Exception ex)
+                    {
+                        Invoke((Action)(() =>
+                        {
+                            this.log.LogError(ex.Message);
+                            MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            this.statusLabel.Text = "Method getActiveSubTabs failed.";
+                            this.statusLabel.ForeColor = Color.Red;
+                            return;
+                        }));
+                    }
+                });
+            }
+            /*else if (menuName == "MTV")
             {
                 List<TabPage> tabList = new List<TabPage>(subTabNameList.Count);
 
@@ -264,40 +369,136 @@ namespace ForecastingModule
 
                 //End TODO only for test DB connection
                 return;
-            }
-            else if (menuName == "BROOM")
+            }*/
+            /*else
             {
-                var testTab = new TabPage(menuName);
+                var tabPage = new TabPage(menuName);
 
-                testDataGridView = new DataGridView
-                {
-                    Dock = DockStyle.Fill,
-                };
-                testDataGridView.AllowUserToAddRows = false;
+                tabControl.TabPages.Add(tabPage);
+                tabControl.SelectedTab = tabPage; // Focus the new tab
+            }*/
 
-                testDataGridView.DataSource = LoadExcelToDataTable("D:\\PROJECTS\\C#\\ForecastingModule48\\bin\\Debug\\mtv_example.xlsx");
-
-                testDataGridView.CellValueChanged += dataGridTestView_CellValueChanged;
-                testTab.Controls.Add(testDataGridView);
-
-                tabControl.TabPages.Add(testTab);
-                tabControl.SelectedTab = testTab; // Focus the new tab
-                return;
-            }
-            else if (menuName == "STABILIZER")
-            {
-                var label = new Label
-                {
-                    Text = "Content for STABILIZER",
-                    Dock = DockStyle.Fill,
-                    TextAlign = System.Drawing.ContentAlignment.MiddleCenter
-                };
-                tabPage.Controls.Add(label);
-            }
-
-            tabControl.TabPages.Add(tabPage);
-            tabControl.SelectedTab = tabPage; // Focus the new tab
+            //tabControl.TabPages.Add(tabPage);
+            //tabControl.SelectedTab = tabPage; // Focus the new tab
         }
+
+        private void OnSelectOperationSubTab(object sender, EventArgs e)
+        {
+            if(sender is TabPage subTab) {
+                MessageBox.Show($"Cliked subTab {subTab.Text}"); 
+            }
+            
+        }
+
+        //private async void AddTab(string menuName)
+        //{
+        //    //check if if the tab already exist
+        //    foreach (TabPage existingTab in tabControl.TabPages)
+        //    {
+        //        if (existingTab.Text == menuName)
+        //        {
+        //            tabControl.SelectedTab = existingTab; // Focus the existing tab
+        //            return;
+        //        }
+        //    }
+
+        //    // Create a new tab page
+        //    var tabPage = new TabPage(menuName);
+
+        //    clearTabsAndContents();
+
+        //    if (menuName == "MTV" /*&& tabControl.TabPages.Count == 0*/)
+        //    {
+        //        List<TabPage> tabList = new List<TabPage>(subTabNameList.Count);
+
+        //        foreach (var tabName in subTabNameList)
+        //        {
+        //            var mtvTab = new TabPage(tabName);
+        //            var dataGridView = new DataGridView
+        //            {
+        //                Dock = DockStyle.Fill,
+        //                ColumnCount = 3
+        //            };
+        //            dataGridView.Rows.Add("Row 1", "Data 1", "Info 1");
+        //            dataGridView.Rows.Add("Row 2", "Data 2", "Info 2");
+        //            mtvTab.Controls.Add(dataGridView);
+
+        //            tabControl.TabPages.Add(mtvTab);
+
+        //            tabList.Add(mtvTab);
+
+        //            //tabControl.SelectedTab = mtvTab; // Focus the new tab
+        //        }
+
+        //        var firstSubTab = tabList.Count > 0? tabList[0] : null;
+        //        if (firstSubTab != null)
+        //        {
+        //            tabControl.SelectedTab = firstSubTab; // Focus the new tab
+        //        }
+
+        //        //TODO only for test DB connection
+        //        this.statusLabel.Text = "Trying to run query.";
+
+        //        await Task.Run(() =>
+        //        {
+        //            try
+        //            {
+        //                //db.ExecuteMySqlQuery("SELECT U.user_name, U.device_id FROM user U");
+        //                db.ExecuteQuery("select USR_UserName, USR_Access_OperationsPlanning FROM [WeilerForecasting].[dbo].[Users]");
+        //                Invoke((Action)(() =>
+        //                {
+        //                    this.statusLabel.Text = "Query been runed.";
+        //                }));
+        //            }
+        //            catch (Exception ex)
+        //            {
+        //                Invoke((Action)(() =>
+        //                {
+        //                    this.log.LogError(ex.Message);
+        //                    MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        //                    this.statusLabel.Text = "Query has been failed.";
+        //                    this.statusLabel.ForeColor = Color.Red;
+        //                    return;
+        //                }));
+        //            }
+        //        });
+
+        //        //End TODO only for test DB connection
+        //        return;
+        //    }
+        //    else if (menuName == "BROOM")
+        //    {
+        //        var testTab = new TabPage(menuName);
+
+        //        testDataGridView = new DataGridView
+        //        {
+        //            Dock = DockStyle.Fill,
+        //        };
+        //        testDataGridView.AllowUserToAddRows = false;
+
+        //        testDataGridView.DataSource = LoadExcelToDataTable("D:\\PROJECTS\\C#\\ForecastingModule48\\bin\\Debug\\mtv_example.xlsx");
+
+        //        testDataGridView.CellValueChanged += dataGridTestView_CellValueChanged;
+        //        testTab.Controls.Add(testDataGridView);
+
+        //        tabControl.TabPages.Add(testTab);
+        //        tabControl.SelectedTab = testTab; // Focus the new tab
+        //        return;
+        //    }
+        //    else if (menuName == "STABILIZER")
+        //    {
+        //        var label = new Label
+        //        {
+        //            Text = "Content for STABILIZER",
+        //            Dock = DockStyle.Fill,
+        //            TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+        //        };
+        //        tabPage.Controls.Add(label);
+        //    }
+
+        //    tabControl.TabPages.Add(tabPage);
+        //    tabControl.SelectedTab = tabPage; // Focus the new tab
+        //}
 
         private void clearTabsAndContents()
         {

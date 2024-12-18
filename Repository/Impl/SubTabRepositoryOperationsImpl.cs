@@ -6,38 +6,37 @@ using ForecastingModule.Utilities;
 
 namespace ForecastingModule.Repository.Impl
 {
-    internal sealed class TabRepositoryImpl : TabRepository
+    internal sealed class SubTabRepositoryOperationsImpl : SubTabRepository
     {
-
         private readonly string connectionString = (string)ConfigFileManager.Instance.Read(ConfigFileManager.KEY_HOST);
         private readonly Logger log = Logger.Instance;
 
         private readonly DatabaseHelper db = DatabaseHelper.Instance;
-        private static readonly Lazy<TabRepositoryImpl> _instance = new Lazy<TabRepositoryImpl>(() => new TabRepositoryImpl());
+        private static readonly Lazy<SubTabRepositoryOperationsImpl> _instance = new Lazy<SubTabRepositoryOperationsImpl>(() => new SubTabRepositoryOperationsImpl());
 
-        public static TabRepositoryImpl Instance => _instance.Value;
+        public static SubTabRepositoryOperationsImpl Instance => _instance.Value;
 
-        private TabRepositoryImpl()
+        private SubTabRepositoryOperationsImpl()
         {
         }
 
-        public List<string> getActiveTabs()
+        public List<string> getActiveSubTabs()
         {
-            List<string> tabs = new List<string>();
+            List<string> subTabs = new List<string>();
             try
             {
                 using (var connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
 
-                    using (var command = new SqlCommand("SELECT [TAB_TabName] FROM [WeilerForecasting].[dbo].[ParentTabs] where [TAB_ActiveFlag] = 1 order by [TAB_DisplayOrder]", connection))
+                    using (var command = new SqlCommand("select distinct sc.SC_OperationsTab, t1.TAB_DisplayOrder  from [WeilerForecasting].[dbo].[SalesCodes] as sc  join (selecT pt.TAB_TabName, pt.TAB_DisplayOrder  from [WeilerForecasting].[dbo].ParentTabs as pt) as t1 on t1.TAB_TabName = sc.SC_ForecastTab  and sc.SC_ActiveFlag =1   and sc.SC_BaseFlag = 1  order by t1.TAB_DisplayOrder", connection))
                     {
                         using (var reader = command.ExecuteReader())
                         {
                             while (reader.Read())
                             {
-                                string tabName = reader.GetString(reader.GetOrdinal("TAB_TabName"));
-                                tabs.Add(tabName);
+                                string tabName = reader.GetString(reader.GetOrdinal("SC_OperationsTab"));
+                                subTabs.Add(tabName);
                             }
                         }
                     }
@@ -49,7 +48,7 @@ namespace ForecastingModule.Repository.Impl
                 throw ex;
             }
 
-            return tabs;
+            return subTabs;
         }
     }
 }
