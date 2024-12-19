@@ -43,7 +43,7 @@ namespace ForecastingModule
         private static void logSuccessLogIn(LoginForm loginForm)
         {
             log.LogInfo($"User: {loginForm.userName} has been loged successfully.");
-            log.LogInfo($"Machine Net Address: {SytemInfo.getIPAdress()} and computer name {SytemInfo.getMachineName()}");
+            log.LogInfo($"Machine Net Address: {SystemInfo.getIPAdress()} and computer name {SystemInfo.getMachineName()}");
         }
 
         private static void writeToConfigIfUserNotInConfigFile(LoginForm loginForm)

@@ -26,7 +26,7 @@ namespace ForecastingModule
         public readonly Font TEXT_FONT = new Font("Arial", 9, FontStyle.Bold);
 
         private readonly Logger log = Logger.Instance;
-        private readonly ConfigFileManager config = ConfigFileManager.Instance;        
+        private readonly ConfigFileManager config = ConfigFileManager.Instance;
 
         private readonly DatabaseHelper db = DatabaseHelper.Instance;
 
@@ -38,6 +38,10 @@ namespace ForecastingModule
         ///  Clean up any resources being used.
         /// </summary>
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+
+        private string selectedTab;
+        private string selectedSubTab;
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -170,7 +174,7 @@ namespace ForecastingModule
                 };
                 button.FlatAppearance.BorderColor = Color.DarkSeaGreen;
                 button.FlatAppearance.BorderSize = 1;
-                
+
                 button.TabStop = false;//Prevent highlight (looks selection) on last button
                                        //
                 button.Click += OnMenuButtonClick;
@@ -195,200 +199,83 @@ namespace ForecastingModule
 
         private async void AddTab(string menuName)
         {
-            //check if if the tab already exist
-            foreach (TabPage existingTab in tabControl.TabPages)
-            {
-                if (existingTab.Text == menuName)
-                {
-                    tabControl.SelectedTab = existingTab; // Focus the existing tab
-                    return;
-                }
-            }
-
-            // Create a new tab page
-            //var tabPage = new TabPage(menuName);
-
             clearTabsAndContents();
 
-            if(menuName == ITEM_OPERATION_PLANNING)
+            if (menuName == ITEM_OPERATION_PLANNING)
             {
-                await Task.Run(() =>
-                {
-                    try
-                    {
-                        List<string> operationSubTabs = SubTabRepositoryOperationsImpl.Instance.getActiveSubTabs();
-
-                        Invoke((Action)(() =>
-                        {
-                            List<TabPage> tabList = new List<TabPage>(operationSubTabs.Count);
-                            foreach (var tabName in operationSubTabs)
-                            {
-                                var mtvTab = new TabPage(tabName);
-
-                                tabControl.TabPages.Add(mtvTab);
-
-                                tabList.Add(mtvTab);
-
-                                mtvTab.GotFocus += OnSelectOperationSubTab;
-                            }
-
-                            var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
-                            if (firstSubTab != null)
-                            {
-                                tabControl.SelectedTab = firstSubTab; // Focus the new tab
-                            }
-                        }));
-                    }
-                    catch (Exception ex)
-                    {
-                        Invoke((Action)(() =>
-                        {
-                            this.log.LogError(ex.Message);
-                            MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            this.statusLabel.Text = "Method getActiveSubTabs failed.";
-                            this.statusLabel.ForeColor = Color.Red;
-                            return;
-                        }));
-                    }
-                });
-
-                //operationSubTabs = SubTabRepositoryOperationsImpl.Instance.getActiveSubTabs();
-                //List<TabPage> tabList = new List<TabPage>(operationSubTabs.Count);
-                //foreach (var tabName in operationSubTabs)
-                //{
-                //    var mtvTab = new TabPage(tabName);
-
-                //    tabControl.TabPages.Add(mtvTab);
-
-                //    tabList.Add(mtvTab);
-
-                //    mtvTab.GotFocus += OnSelectOperationSubTab;
-                //}
-
-                //var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
-                //if (firstSubTab != null)
-                //{
-                //    tabControl.SelectedTab = firstSubTab; // Focus the new tab
-                //}
-            } else {
-                await Task.Run(() =>
-                {
-                    try
-                    {
-                        List<string> forecastSubTabs = SubTabRepositoryForecastImpl.Instance.getActiveSubTabs(menuName);
-
-                        Invoke((Action)(() =>
-                        {
-                            List<TabPage> tabList = new List<TabPage>(forecastSubTabs.Count);
-                            foreach (var tabName in forecastSubTabs)
-                            {
-                                var mtvTab = new TabPage(tabName);
-
-                                tabControl.TabPages.Add(mtvTab);
-
-                                tabList.Add(mtvTab);
-
-                                mtvTab.GotFocus += OnSelectOperationSubTab;
-                            }
-
-                            var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
-                            if (firstSubTab != null)
-                            {
-                                tabControl.SelectedTab = firstSubTab; // Focus the new tab
-                            }
-                        }));
-                    }
-                    catch (Exception ex)
-                    {
-                        Invoke((Action)(() =>
-                        {
-                            this.log.LogError(ex.Message);
-                            MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            this.statusLabel.Text = "Method getActiveSubTabs failed.";
-                            this.statusLabel.ForeColor = Color.Red;
-                            return;
-                        }));
-                    }
-                });
+                await populateSubTabs();
             }
-            /*else if (menuName == "MTV")
+            else
             {
-                List<TabPage> tabList = new List<TabPage>(subTabNameList.Count);
-
-                foreach (var tabName in subTabNameList)
-                {
-                    var mtvTab = new TabPage(tabName);
-                    var dataGridView = new DataGridView
-                    {
-                        Dock = DockStyle.Fill,
-                        ColumnCount = 3
-                    };
-                    dataGridView.Rows.Add("Row 1", "Data 1", "Info 1");
-                    dataGridView.Rows.Add("Row 2", "Data 2", "Info 2");
-                    mtvTab.Controls.Add(dataGridView);
-
-                    tabControl.TabPages.Add(mtvTab);
-
-                    tabList.Add(mtvTab);
-
-                    //tabControl.SelectedTab = mtvTab; // Focus the new tab
-                }
-
-                var firstSubTab = tabList.Count > 0? tabList[0] : null;
-                if (firstSubTab != null)
-                {
-                    tabControl.SelectedTab = firstSubTab; // Focus the new tab
-                }
-
-                //TODO only for test DB connection
-                this.statusLabel.Text = "Trying to run query.";
-
-                await Task.Run(() =>
-                {
-                    try
-                    {
-                        //db.ExecuteMySqlQuery("SELECT U.user_name, U.device_id FROM user U");
-                        db.ExecuteQuery("select USR_UserName, USR_Access_OperationsPlanning FROM [WeilerForecasting].[dbo].[Users]");
-                        Invoke((Action)(() =>
-                        {
-                            this.statusLabel.Text = "Query been runed.";
-                        }));
-                    }
-                    catch (Exception ex)
-                    {
-                        Invoke((Action)(() =>
-                        {
-                            this.log.LogError(ex.Message);
-                            MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            this.statusLabel.Text = "Query has been failed.";
-                            this.statusLabel.ForeColor = Color.Red;
-                            return;
-                        }));
-                    }
-                });
-
-                //End TODO only for test DB connection
-                return;
-            }*/
-            /*else
-            {
-                var tabPage = new TabPage(menuName);
-
-                tabControl.TabPages.Add(tabPage);
-                tabControl.SelectedTab = tabPage; // Focus the new tab
-            }*/
-
-            //tabControl.TabPages.Add(tabPage);
-            //tabControl.SelectedTab = tabPage; // Focus the new tab
+                await populateSubTabs(menuName);
+            }
         }
 
-        private void OnSelectOperationSubTab(object sender, EventArgs e)
+        private async Task populateSubTabs(string menuName = null)
         {
-            if(sender is TabPage subTab) {
-                MessageBox.Show($"Cliked subTab {subTab.Text}"); 
-            }
-            
+            await Task.Run(() =>
+            {
+                try
+                {
+                    List<string> forecastSubTabs = menuName != null ? SubTabRepositoryForecastImpl.Instance.getActiveSubTabs(menuName)
+                    : SubTabRepositoryOperationsImpl.Instance.getActiveSubTabs();
+
+                    Invoke((Action)(() =>
+                    {
+                        List<TabPage> tabList = new List<TabPage>(forecastSubTabs.Count);
+                        foreach (var tabName in forecastSubTabs)
+                        {
+                            var mtvTab = new TabPage(tabName);
+                            tabControl.TabPages.Add(mtvTab);
+
+                            tabList.Add(mtvTab);
+
+                            //mtvTab.GotFocus += OnSelectOperationSubTab;
+                            //tabControl.Selecting += OnSelectingOperationPlaningModelTab;
+                        }
+                        
+                        tabControl.Selected += OnSelectedOperationPlaningModelTab;
+
+                        var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
+                        if (firstSubTab != null)
+                        {
+                            tabControl.SelectedTab = firstSubTab; // Focus the new tab
+
+                            TabControlEventArgs args = new TabControlEventArgs(firstSubTab, 0, TabControlAction.Selected);
+                            OnSelectedOperationPlaningModelTab(tabControl, args);
+                        }
+
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        this.log.LogError(ex.Message);
+                        MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        this.statusLabel.Text = "Population of SubTabs failed.";
+                        this.statusLabel.ForeColor = Color.Red;
+                        return;
+                    }));
+                }
+            });
         }
+
+        private void OnSelectedOperationPlaningModelTab(object sender, TabControlEventArgs e)
+        {
+            if (sender is TabControl tabControll && tabControl.SelectedTab != null)
+            {
+                MessageBox.Show($"Cliked subTab {tabControl.SelectedTab.Text}");
+            }
+        }
+
+        //private void OnSelectingOperationPlaningModelTab(object sender, TabControlCancelEventArgs e)
+        //{
+        //    if (sender is TabControl tabControll)
+        //    {
+        //        MessageBox.Show($"Cliked subTab {tabControl.SelectedTab.Text}");
+        //    }
+        //}
 
         //private async void AddTab(string menuName)
         //{
@@ -507,6 +394,7 @@ namespace ForecastingModule
                 tab.Controls.Clear();
             }
             tabControl.TabPages.Clear();
+            tabControl.Selected -= OnSelectedOperationPlaningModelTab;
         }
 
         #endregion

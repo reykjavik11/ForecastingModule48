@@ -23,7 +23,7 @@ namespace ForecastingModule.OtherForm
         {
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
-            LOG_USER_STRING = $"Machine Net Address: {SytemInfo.getIPAdress()} and computer name {SytemInfo.getMachineName()}";
+            LOG_USER_STRING = $"Machine Net Address: {SystemInfo.getIPAdress()} and computer name {SystemInfo.getMachineName()}";
             //Set form properties
             this.Text = "Login";
             this.Size = new Size(300, WIDTH);

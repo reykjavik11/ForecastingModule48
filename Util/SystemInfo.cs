@@ -2,9 +2,9 @@
 
 namespace ForecastingModule.Util
 {
-    internal sealed class SytemInfo
+    internal sealed class SystemInfo
     {
-        private SytemInfo()
+        private SystemInfo()
         {
         }
 
