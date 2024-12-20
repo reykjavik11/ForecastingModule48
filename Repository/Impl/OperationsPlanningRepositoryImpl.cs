@@ -6,17 +6,17 @@ using ForecastingModule.Utilities;
 
 namespace ForecastingModule.Repository.Impl
 {
-    internal class OperationsPlanningRepositoryIml : OperationsPlanningRepository
+    internal class OperationsPlanningRepositoryImpl : OperationsPlanningRepository
     {
         private readonly string connectionString = (string)ConfigFileManager.Instance.Read(ConfigFileManager.KEY_HOST);
         private readonly Logger log = Logger.Instance;
 
         private readonly DatabaseHelper db = DatabaseHelper.Instance;
-        private static readonly Lazy<OperationsPlanningRepositoryIml> _instance = new Lazy<OperationsPlanningRepositoryIml>(() => new OperationsPlanningRepositoryIml());
+        private static readonly Lazy<OperationsPlanningRepositoryImpl> _instance = new Lazy<OperationsPlanningRepositoryImpl>(() => new OperationsPlanningRepositoryImpl());
 
-        public static OperationsPlanningRepositoryIml Instance => _instance.Value;
+        public static OperationsPlanningRepositoryImpl Instance => _instance.Value;
 
-        private OperationsPlanningRepositoryIml()
+        private OperationsPlanningRepositoryImpl()
         {
         }
 
@@ -29,7 +29,7 @@ namespace ForecastingModule.Repository.Impl
                 {
                     connection.Open();
 
-                    using (var command = new SqlCommand($"select op.OPS_NbrDays, op.OPS_NbrDays, op.OPS_Comments FROM [WeilerForecasting].[dbo].[OperationsSettings] op where op.OPS_Tab ='{equipmentName}' and op.OPS_ActiveFlag=1", connection))
+                    using (var command = new SqlCommand($"select op.OPS_NbrDays, op.OPS_NbrMonths, op.OPS_Comments FROM [WeilerForecasting].[dbo].[OperationsSettings] op where op.OPS_Tab ='{equipmentName}' and op.OPS_ActiveFlag=1", connection))
                     {
                         using (var reader = command.ExecuteReader())
                         {
@@ -83,12 +83,13 @@ namespace ForecastingModule.Repository.Impl
 
                                     result.Add(salesCode, syncLinkedDictionary);
                                 }
-                                else
-                                {   //set dynamic data here
+                                //else
+                                //{   
+                                    //set dynamic data here
                                     DateTime dateKey = reader.GetDateTime(reader.GetOrdinal("OP_Date"));
                                     int quantity = reader.GetInt32(reader.GetOrdinal("OP_Quantity"));
                                     syncLinkedDictionary.Add(dateKey, quantity);
-                                }
+                                //}
                             }
                         }
                     }

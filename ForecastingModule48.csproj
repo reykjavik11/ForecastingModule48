@@ -152,7 +152,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repository\ForecastRepository.cs" />
     <Compile Include="Repository\Impl\ForecastRepositoryImpl.cs" />
-    <Compile Include="Repository\Impl\OperationsPlanningRepositoryIml.cs" />
+    <Compile Include="Repository\Impl\OperationsPlanningRepositoryImpl.cs" />
     <Compile Include="Repository\OperationsPlanningRepository.cs" />
     <Compile Include="Repository\SubTabForecastRepository.cs" />
     <Compile Include="Repository\Impl\SubTabRepositoryForecastImpl.cs" />
@@ -162,10 +162,14 @@
     <Compile Include="Repository\SubTabRepository.cs" />
     <Compile Include="Repository\TabRepository.cs" />
     <Compile Include="Repository\UserRepository.cs" />
+    <Compile Include="Service\Impl\OperationsPlanningServiceImpl.cs" />
+    <Compile Include="Service\OperationsPlanningService.cs" />
     <Compile Include="Service\UserSession.cs" />
     <Compile Include="Service\Impl\UserServiceImpl.cs" />
     <Compile Include="Service\UserService.cs" />
     <Compile Include="Helper\Optional.cs" />
+    <Compile Include="Util\Validator.cs" />
+    <Compile Include="Util\DataGridHelper.cs" />
     <Compile Include="Util\SystemInfo.cs" />
     <Compile Include="Util\ConfigFileManager.cs" />
     <Compile Include="Util\DatabaseHelper.cs" />

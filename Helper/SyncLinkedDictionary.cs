@@ -20,7 +20,7 @@ namespace ForecastingModule.Helper
                 }
                 else
                 {
-                    throw new ArgumentException("Key already exists.");
+                    Update(key, value, value);
                 }
             }
         }
@@ -55,7 +55,9 @@ namespace ForecastingModule.Helper
 
         public TValue Get(TKey key)
         {
-            return _dictionary[key];
+            TValue value;
+            _dictionary.TryGetValue(key, out value);
+            return value;
         }
 
         public IEnumerable<TKey> Keys

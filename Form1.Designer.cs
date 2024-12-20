@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Drawing;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ForecastingModule.Helper;
 using ForecastingModule.Repository.Impl;
 using ForecastingModule.Service;
+using ForecastingModule.Service.Impl;
+using ForecastingModule.Util;
 using ForecastingModule.Utilities;
-using OfficeOpenXml;
 
 namespace ForecastingModule
 {
@@ -20,7 +19,6 @@ namespace ForecastingModule
         private const string ITEM_MANANGE = "MANAGE";
         private SplitContainer splitContainer;
         private TabControl tabControl;
-        private DataGridView testDataGridView;
         private ToolStripStatusLabel statusLabel;
 
         public readonly Font TEXT_FONT = new Font("Arial", 9, FontStyle.Bold);
@@ -29,11 +27,11 @@ namespace ForecastingModule
         private readonly ConfigFileManager config = ConfigFileManager.Instance;
 
         private readonly DatabaseHelper db = DatabaseHelper.Instance;
+        private readonly OperationsPlanningServiceImpl operationService = OperationsPlanningServiceImpl.Instance;
 
         ///  Required designer variable.
         private System.ComponentModel.IContainer components = null;
         private List<string> tabList = new List<string>();
-        private List<string> subTabNameList = new List<string> { "E1050", "E1250C", "E1650A", "E2850C", "E2860C" };
         /// <summary>
         ///  Clean up any resources being used.
         /// </summary>
@@ -41,7 +39,9 @@ namespace ForecastingModule
 
         private string selectedTab;
         private string selectedSubTab;
-
+        private SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> selectedTabModel;
+        private bool isModelUpdated = false;
+        private readonly static string OPERATION_DATE_FORMAT = "MMM-yy";
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -187,8 +187,9 @@ namespace ForecastingModule
         {
             if (sender is Button button)
             {
-                this.statusLabel.Text = string.Empty;
-                this.statusLabel.ForeColor = Color.LimeGreen;
+                clear();
+                //this.statusLabel.ForeColor = Color.LimeGreen;
+                this.statusLabel.ForeColor = Color.DarkBlue;
 
                 ((Control)button).Focus();
 
@@ -197,18 +198,47 @@ namespace ForecastingModule
             }
         }
 
+        private void clear()
+        {
+            this.statusLabel.Text = string.Empty;
+            selectedSubTab = string.Empty;
+            selectedTabModel = null;
+            isModelUpdated = false;
+        }
+
         private async void AddTab(string menuName)
         {
+            log.LogInfo($"Menu {menuName} was clicked.");
             clearTabsAndContents();
+
+            selectedTab = menuName;
 
             if (menuName == ITEM_OPERATION_PLANNING)
             {
                 await populateSubTabs();
             }
+            else if (menuName == "MANAGE")
+            {
+                populateManageTab(menuName);
+            }
             else
             {
                 await populateSubTabs(menuName);
             }
+        }
+
+        private void populateManageTab(string menuName)
+        {
+            var tabPage = new TabPage(menuName);
+            var label = new Label
+            {
+                Text = "Content for MANAGE",
+                Dock = DockStyle.Fill,
+                TextAlign = System.Drawing.ContentAlignment.MiddleCenter
+            };
+            tabPage.Controls.Add(label);
+            tabControl.TabPages.Add(tabPage);
+            tabControl.SelectedTab = tabPage;
         }
 
         private async Task populateSubTabs(string menuName = null)
@@ -233,8 +263,10 @@ namespace ForecastingModule
                             //mtvTab.GotFocus += OnSelectOperationSubTab;
                             //tabControl.Selecting += OnSelectingOperationPlaningModelTab;
                         }
-                        
+
                         tabControl.Selected += OnSelectedOperationPlaningModelTab;
+
+                        tabControl.Selecting += OnChangeTheTab;
 
                         var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
                         if (firstSubTab != null)
@@ -261,11 +293,234 @@ namespace ForecastingModule
             });
         }
 
+        private void OnChangeTheTab(object sender, TabControlCancelEventArgs e)
+        {
+            // If preventTabSwitch is true, cancel the tab switch
+            if (isModelUpdated)
+            {
+                DialogResult result = MessageBox.Show("There are unsaved changes. Do you really want to switch the tab?", "Unsaved Changes",
+                                                        MessageBoxButtons.YesNo,
+                                                        MessageBoxIcon.Warning);
+                if (result == DialogResult.No)
+                {
+                    e.Cancel = true;  // Prevent switching to the selected tab
+                }
+                else
+                {
+                    isModelUpdated = false;  // Reset to false if the user confirms
+                }
+            }
+        }
+
         private void OnSelectedOperationPlaningModelTab(object sender, TabControlEventArgs e)
         {
             if (sender is TabControl tabControll && tabControl.SelectedTab != null)
             {
-                MessageBox.Show($"Cliked subTab {tabControl.SelectedTab.Text}");
+                this.selectedSubTab = e.TabPage.Text;
+                log.LogInfo($"Sub Menu {tabControl.SelectedTab.Text} was clicked.");
+                //MessageBox.Show($"Cliked subTab {tabControl.SelectedTab.Text}");
+                clear();//clear when selected on tab and subTab
+                generateDataGrid(e.TabPage, selectedTab, e.TabPage.Text);
+            }
+        }
+
+        private void generateDataGrid(TabPage selectedTab, string selectedTabName, string selectedSubTabName)
+        {
+
+            if (ITEM_OPERATION_PLANNING == selectedTabName)
+            {
+                this.selectedSubTab = selectedSubTabName;
+                log.LogInfo($"Generating {ITEM_OPERATION_PLANNING} DataGridView for '{selectedSubTabName}' moodel");
+
+                //SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> syncLinkedDictionary
+                selectedTabModel = operationService.retrieveExistedOperationsPlanning(selectedSubTabName);
+
+                List<string> headerSaleCodes = selectedTabModel.Keys.ToList();
+                int numCoLumns = headerSaleCodes.Count;
+                if (numCoLumns == 0)
+                {
+                    log.LogWarning($"generateDataGrid: Number retrieve columns: {numCoLumns}");
+                }
+                var dataGridView = new DataGridView
+                {
+                    Dock = DockStyle.Fill,
+                    ColumnCount = numCoLumns + 1,
+                    ColumnHeadersVisible = false,
+                    //RowHeadersVisible = false
+                };
+                dataGridView.CellValidating += (sender, e) =>
+                {
+                    string newValue = e.FormattedValue?.ToString() ?? "";
+
+                    string cleanValue = Validator.RemoveNonNumericCharacters(newValue);
+                    //if (!string.IsNullOrEmpty(newValue) && !Validator.IsWholeNumber(newValue))
+                    if (cleanValue != newValue)
+                    {
+
+                        dataGridView[e.ColumnIndex, e.RowIndex].Value = cleanValue;
+                        dataGridView.Update();
+                        // Show an error message
+                        MessageBox.Show("Please enter a valid whole number without decimal points or commas.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                        // Cancel the edit
+                        e.Cancel = true;
+                    }
+                    else if(!string.IsNullOrEmpty(newValue))
+                    {
+                        string saleCode = (string)dataGridView[e.ColumnIndex, 0].Value;
+
+                        SyncLinkedDictionary<object, object> saleCodeContent = selectedTabModel.Get(saleCode);
+                        if(saleCodeContent != null)
+                        {
+                            string date = (string)dataGridView[0, e.RowIndex].Value;
+                            DateTime convertedDateTime = DateTime.ParseExact(date, OPERATION_DATE_FORMAT, System.Globalization.CultureInfo.InvariantCulture);
+
+                            object oldVallue = saleCodeContent.Get(convertedDateTime);
+
+                            if (oldVallue != null)
+                            {
+                                saleCodeContent.Update(convertedDateTime, int.Parse(newValue), oldVallue);
+                            } else
+                            {
+                                saleCodeContent.Add(convertedDateTime, int.Parse(newValue));
+                            }
+
+                            int total = OperationsPlanningServiceImpl.getTotal(saleCode, selectedTabModel);
+
+                            saleCodeContent.Add(OperationsPlanningServiceImpl.TOTAL, int.Parse(newValue));
+
+                            dataGridView[e.ColumnIndex, dataGridView.RowCount - 1 ].Value = total;
+                            isModelUpdated = true;
+
+                        }
+                    }
+
+                };
+
+                dataGridView.AllowUserToAddRows = false;
+                selectedTab.Controls.Add(dataGridView);
+
+
+                bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessOperationsPlanning;
+                if (readOnlyMode)
+                {
+                    dataGridView.ReadOnly = true;
+
+                    string message = $"{ITEM_OPERATION_PLANNING} DataGridView is read only.";
+                    log.LogInfo(message);
+                    statusLabel.Text = message;
+                }
+
+                if (!readOnlyMode)
+                {
+                    // set first row and first column to read only and last TOTAL row
+                    dataGridView.CellBeginEdit += OnDataGridView_PreventCellBeginEdit;
+                }
+
+                Dictionary<string, object> operationSettings = operationService.getOperationsSetting(selectedSubTabName);
+
+                object objDays;
+                object objMonths;
+                if (operationSettings.TryGetValue("OPS_NbrDays", out objDays) && operationSettings.TryGetValue("OPS_NbrMonths", out objMonths))
+                {
+                    List<DateTime> dateTimes = DataGridHelper.GenerateDateList(DateTime.Now, (int)objDays, (int)objMonths);
+
+                    headerSaleCodes.Insert(0, "");
+                    dataGridView.Rows.Add(headerSaleCodes.ToArray());//add header line
+                    //dataGridView.Rows.Add(headerSaleCodes);//add header line
+
+                    List<object> totalRow = new List<object> { OperationsPlanningServiceImpl.TOTAL };
+
+                    foreach (var date in dateTimes)//add other lines with values
+                    {
+                        List<object> contentRow = new List<object>();
+                        contentRow.Add(date.ToString(OPERATION_DATE_FORMAT));
+
+                        foreach (var code in headerSaleCodes)
+                        {
+                            SyncLinkedDictionary<object, object> valuesByCode = selectedTabModel.Get(code);
+                            if (valuesByCode != null)
+                            {
+                                object number = valuesByCode.Get(date);
+                                contentRow.Add(number);
+
+                                object total = valuesByCode.Get(OperationsPlanningServiceImpl.TOTAL);
+                                if (total != null)
+                                {
+                                    totalRow.Add(total);
+                                }
+                            }
+                        }
+                        dataGridView.Rows.Add(contentRow.ToArray());
+                    }
+                    //Add TOTAl Footer
+                    dataGridView.Rows.Add(totalRow.ToArray());
+
+                    adjsutGridToCenter(dataGridView);
+                }
+            }
+            else if (ITEM_MANANGE != selectedSubTabName)
+            {
+                this.selectedSubTab = selectedSubTab;
+                log.LogInfo($"Generating Forecast DataGridView for '{selectedSubTabName}' moodel");
+            }
+            else if (ITEM_MANANGE == selectedSubTabName)
+            {
+                log.LogInfo($"Grip on Manage will be there.");
+            }
+        }
+
+        //private void DataGridCellValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        //{
+        //    if (sender is DataGridView dataGridView) {
+        //        string enteredValue = dataGridView[e.ColumnIndex, e.RowIndex].EditedFormattedValue?.ToString() ?? "";
+
+        //        // Allow empty string or numeric values
+        //        if (!string.IsNullOrEmpty(enteredValue) && !int.TryParse(enteredValue, out _))
+        //        {
+        //            //MessageBox.Show("Only numbers or an empty string are allowed.");
+        //            e.Cancel = true;  // Prevent the value from being saved
+        //        }
+        //    }
+        //}
+
+        private static void adjsutGridToCenter(DataGridView dataGridView)
+        {
+            foreach (DataGridViewColumn column in dataGridView.Columns)
+            {
+                if (column.Index != 0) // Exclude the first column
+                {
+                    column.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
+                }
+            }
+
+            //Center align cells in all rows except the last row
+            //foreach (DataGridViewRow row in dataGridView.Rows)
+            //{
+            //    if (row.Index != dataGridView.Rows.Count - 1) // Exclude the last row
+            //    {
+            //        foreach (DataGridViewCell cell in row.Cells)
+            //        {
+            //            if (cell.ColumnIndex != 0) // Exclude the first column
+            //            {
+            //                cell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
+            //            }
+            //        }
+            //    }
+            //}
+        }
+
+        private void OnDataGridView_PreventCellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        {
+            // Block editing for the first row(sale codes HEADER) or first column (period column) or last row (TOTAL)
+            if (sender is DataGridView dataGrid)
+            {
+                int lastRowIndex = dataGrid.RowCount - 1;
+
+                if (e.RowIndex == 0 || e.ColumnIndex == 0 || e.RowIndex == lastRowIndex)
+                {
+                    e.Cancel = true;
+                }
             }
         }
 
@@ -398,65 +653,6 @@ namespace ForecastingModule
         }
 
         #endregion
-        /*
-            Test excell loading
-        */
-        private DataTable LoadExcelToDataTable(string filePath)
-        {
-            try
-            {
-                log.LogInfo($"Trying to read data from {filePath} file.");
-                using (ExcelPackage package = new ExcelPackage(new FileInfo(filePath)))
-                {
-                    if (package.Workbook.Worksheets.Count == 0)
-                    {
-                        string message = $"Can not find path {filePath} or file is empty.";
-                        MessageBox.Show(message);
-                        log.LogError(message);
-
-                        return new DataTable();
-                    }
-                    ExcelWorksheet worksheet = package.Workbook.Worksheets[0]; // First worksheet
-                    DataTable dataTable = new DataTable();
-
-                    // Get column headers
-                    for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
-                    {
-                        dataTable.Columns.Add(worksheet.Cells[1, col].Text);
-                    }
-
-                    // Get rows
-                    for (int row = 2; row <= worksheet.Dimension.End.Row; row++)
-                    {
-                        DataRow dataRow = dataTable.NewRow();
-                        for (int col = 1; col <= worksheet.Dimension.End.Column; col++)
-                        {
-                            dataRow[col - 1] = worksheet.Cells[row, col].Text;
-                        }
-                        dataTable.Rows.Add(dataRow);
-                    }
-                    log.LogInfo($"File {filePath} was read sucessfully.");
-
-                    return dataTable;
-                }
-            }
-            catch (Exception ex)
-            {
-                string message = $"Exception while rading data file {filePath} - {ex.Message}.";
-                log.LogError(message);
-                MessageBox.Show(message);
-                return new DataTable();
-            }
-        }
-
-
-        //Calculation
-        private void dataGridTestView_CellValueChanged(object sender, DataGridViewCellEventArgs e)
-        {
-            //TODO If percentage is present -
-            //EvaluateAndRecalculate(testDataGridView);
-        }
     }
-
 }
 
