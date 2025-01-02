@@ -259,9 +259,6 @@ namespace ForecastingModule
                             tabControl.TabPages.Add(mtvTab);
 
                             tabList.Add(mtvTab);
-
-                            //mtvTab.GotFocus += OnSelectOperationSubTab;
-                            //tabControl.Selecting += OnSelectingOperationPlaningModelTab;
                         }
 
                         tabControl.Selected += OnSelectedOperationPlaningModelTab;
@@ -298,7 +295,7 @@ namespace ForecastingModule
             // If preventTabSwitch is true, cancel the tab switch
             if (isModelUpdated)
             {
-                DialogResult result = MessageBox.Show("There are unsaved changes. Do you really want to switch the tab?", "Unsaved Changes",
+                DialogResult result = MessageBox.Show("There are unsaved changes - all new changes will be lost. Do you really want to switch the tab?", "Unsaved Changes",
                                                         MessageBoxButtons.YesNo,
                                                         MessageBoxIcon.Warning);
                 if (result == DialogResult.No)
@@ -318,7 +315,6 @@ namespace ForecastingModule
             {
                 this.selectedSubTab = e.TabPage.Text;
                 log.LogInfo($"Sub Menu {tabControl.SelectedTab.Text} was clicked.");
-                //MessageBox.Show($"Cliked subTab {tabControl.SelectedTab.Text}");
                 clear();//clear when selected on tab and subTab
                 generateDataGrid(e.TabPage, selectedTab, e.TabPage.Text);
             }
@@ -326,21 +322,21 @@ namespace ForecastingModule
 
         private void generateDataGrid(TabPage selectedTab, string selectedTabName, string selectedSubTabName)
         {
-
             if (ITEM_OPERATION_PLANNING == selectedTabName)
             {
                 this.selectedSubTab = selectedSubTabName;
                 log.LogInfo($"Generating {ITEM_OPERATION_PLANNING} DataGridView for '{selectedSubTabName}' moodel");
 
-                //SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> syncLinkedDictionary
                 selectedTabModel = operationService.retrieveExistedOperationsPlanning(selectedSubTabName);
 
                 List<string> headerSaleCodes = selectedTabModel.Keys.ToList();
                 int numCoLumns = headerSaleCodes.Count;
                 if (numCoLumns == 0)
                 {
-                    log.LogWarning($"generateDataGrid: Number retrieve columns: {numCoLumns}");
+                    log.LogWarning($"generateDataGrid: Number of retrieved columns: {numCoLumns}");
                 }
+                selectedTab.Controls.Clear();
+                
                 var dataGridView = new DataGridView
                 {
                     Dock = DockStyle.Fill,
@@ -348,58 +344,12 @@ namespace ForecastingModule
                     ColumnHeadersVisible = false,
                     //RowHeadersVisible = false
                 };
-                dataGridView.CellValidating += (sender, e) =>
-                {
-                    string newValue = e.FormattedValue?.ToString() ?? "";
-
-                    string cleanValue = Validator.RemoveNonNumericCharacters(newValue);
-                    //if (!string.IsNullOrEmpty(newValue) && !Validator.IsWholeNumber(newValue))
-                    if (cleanValue != newValue)
-                    {
-
-                        dataGridView[e.ColumnIndex, e.RowIndex].Value = cleanValue;
-                        dataGridView.Update();
-                        // Show an error message
-                        MessageBox.Show("Please enter a valid whole number without decimal points or commas.", "Invalid Input", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
-                        // Cancel the edit
-                        e.Cancel = true;
-                    }
-                    else if(!string.IsNullOrEmpty(newValue))
-                    {
-                        string saleCode = (string)dataGridView[e.ColumnIndex, 0].Value;
-
-                        SyncLinkedDictionary<object, object> saleCodeContent = selectedTabModel.Get(saleCode);
-                        if(saleCodeContent != null)
-                        {
-                            string date = (string)dataGridView[0, e.RowIndex].Value;
-                            DateTime convertedDateTime = DateTime.ParseExact(date, OPERATION_DATE_FORMAT, System.Globalization.CultureInfo.InvariantCulture);
-
-                            object oldVallue = saleCodeContent.Get(convertedDateTime);
-
-                            if (oldVallue != null)
-                            {
-                                saleCodeContent.Update(convertedDateTime, int.Parse(newValue), oldVallue);
-                            } else
-                            {
-                                saleCodeContent.Add(convertedDateTime, int.Parse(newValue));
-                            }
-
-                            int total = OperationsPlanningServiceImpl.getTotal(saleCode, selectedTabModel);
-
-                            saleCodeContent.Add(OperationsPlanningServiceImpl.TOTAL, int.Parse(newValue));
-
-                            dataGridView[e.ColumnIndex, dataGridView.RowCount - 1 ].Value = total;
-                            isModelUpdated = true;
-
-                        }
-                    }
-
-                };
-
                 dataGridView.AllowUserToAddRows = false;
-                selectedTab.Controls.Add(dataGridView);
 
+                dataGridView.CellValidating += OnDataGridView_DataGridValidating;
+                dataGridView.CellEndEdit += OnDataGridView_CellOperationEndEdit;
+
+                selectedTab.Controls.Add(dataGridView);
 
                 bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessOperationsPlanning;
                 if (readOnlyMode)
@@ -417,51 +367,12 @@ namespace ForecastingModule
                     dataGridView.CellBeginEdit += OnDataGridView_PreventCellBeginEdit;
                 }
 
-                Dictionary<string, object> operationSettings = operationService.getOperationsSetting(selectedSubTabName);
-
-                object objDays;
-                object objMonths;
-                if (operationSettings.TryGetValue("OPS_NbrDays", out objDays) && operationSettings.TryGetValue("OPS_NbrMonths", out objMonths))
-                {
-                    List<DateTime> dateTimes = DataGridHelper.GenerateDateList(DateTime.Now, (int)objDays, (int)objMonths);
-
-                    headerSaleCodes.Insert(0, "");
-                    dataGridView.Rows.Add(headerSaleCodes.ToArray());//add header line
-                    //dataGridView.Rows.Add(headerSaleCodes);//add header line
-
-                    List<object> totalRow = new List<object> { OperationsPlanningServiceImpl.TOTAL };
-
-                    foreach (var date in dateTimes)//add other lines with values
-                    {
-                        List<object> contentRow = new List<object>();
-                        contentRow.Add(date.ToString(OPERATION_DATE_FORMAT));
-
-                        foreach (var code in headerSaleCodes)
-                        {
-                            SyncLinkedDictionary<object, object> valuesByCode = selectedTabModel.Get(code);
-                            if (valuesByCode != null)
-                            {
-                                object number = valuesByCode.Get(date);
-                                contentRow.Add(number);
-
-                                object total = valuesByCode.Get(OperationsPlanningServiceImpl.TOTAL);
-                                if (total != null)
-                                {
-                                    totalRow.Add(total);
-                                }
-                            }
-                        }
-                        dataGridView.Rows.Add(contentRow.ToArray());
-                    }
-                    //Add TOTAl Footer
-                    dataGridView.Rows.Add(totalRow.ToArray());
-
-                    adjsutGridToCenter(dataGridView);
-                }
+                populateOperationPlanningGrid(selectedSubTabName, headerSaleCodes, dataGridView);
+                adjsutGridToCenter(dataGridView);
             }
             else if (ITEM_MANANGE != selectedSubTabName)
             {
-                this.selectedSubTab = selectedSubTab;
+                this.selectedSubTab = selectedSubTabName;
                 log.LogInfo($"Generating Forecast DataGridView for '{selectedSubTabName}' moodel");
             }
             else if (ITEM_MANANGE == selectedSubTabName)
@@ -470,19 +381,52 @@ namespace ForecastingModule
             }
         }
 
-        //private void DataGridCellValidating(object sender, DataGridViewCellValidatingEventArgs e)
-        //{
-        //    if (sender is DataGridView dataGridView) {
-        //        string enteredValue = dataGridView[e.ColumnIndex, e.RowIndex].EditedFormattedValue?.ToString() ?? "";
+        private void populateOperationPlanningGrid(string selectedSubTabName, List<string> headerSaleCodes, DataGridView dataGridView)
+        {
+            Dictionary<string, object> operationSettings = operationService.getOperationsSetting(selectedSubTabName);
 
-        //        // Allow empty string or numeric values
-        //        if (!string.IsNullOrEmpty(enteredValue) && !int.TryParse(enteredValue, out _))
-        //        {
-        //            //MessageBox.Show("Only numbers or an empty string are allowed.");
-        //            e.Cancel = true;  // Prevent the value from being saved
-        //        }
-        //    }
-        //}
+            object objDays;
+            object objMonths;
+            if (operationSettings.TryGetValue("OPS_NbrDays", out objDays) && operationSettings.TryGetValue("OPS_NbrMonths", out objMonths))
+            {
+                List<DateTime> dateTimes = DataGridHelper.GenerateDateList(DateTime.Now, (int)objDays, (int)objMonths);
+
+                headerSaleCodes.Insert(0, "");
+                dataGridView.Rows.Add(headerSaleCodes.ToArray());//add header line
+
+                List<object> totalRow = new List<object> { OperationsPlanningServiceImpl.TOTAL };
+
+                foreach (var date in dateTimes)//add other lines with values
+                {
+                    List<object> contentRow = new List<object>();
+                    contentRow.Add(date.ToString(OPERATION_DATE_FORMAT));
+
+                    foreach (var code in headerSaleCodes)
+                    {
+                        SyncLinkedDictionary<object, object> valuesByCode = selectedTabModel.Get(code);
+                        if (valuesByCode != null)
+                        {
+                            object number = valuesByCode.Get(date);
+                            contentRow.Add(number);
+
+                            object total = valuesByCode.Get(OperationsPlanningServiceImpl.TOTAL);
+                            if (total != null)
+                            {
+                                totalRow.Add(total);
+                            }
+                        }
+                    }
+                    dataGridView.Rows.Add(contentRow.ToArray());
+                }
+                //Add TOTAl Footer
+                dataGridView.Rows.Add(totalRow.ToArray());
+
+            }
+            else
+            {//IF operattion setting did not set up correctly
+                log.LogWarning("Operattion setting did not set up correctly.");
+            }
+        }
 
         private static void adjsutGridToCenter(DataGridView dataGridView)
         {
@@ -524,13 +468,80 @@ namespace ForecastingModule
             }
         }
 
-        //private void OnSelectingOperationPlaningModelTab(object sender, TabControlCancelEventArgs e)
-        //{
-        //    if (sender is TabControl tabControll)
-        //    {
-        //        MessageBox.Show($"Cliked subTab {tabControl.SelectedTab.Text}");
-        //    }
-        //}
+        private void OnDataGridView_DataGridValidating(object sender, DataGridViewCellValidatingEventArgs e)
+        {
+            if (sender is DataGridView dataGridView)
+            {
+                string newValue = e.FormattedValue?.ToString() ?? "";
+
+                string cleanValue = Validator.RemoveNonNumericCharacters(newValue);
+
+                bool dateRow = !(dataGridView.RowCount - 1 == e.RowIndex || e.RowIndex == 0); //last dataGridView.RowCount - 1 - TOTAL first row, or first empty row 
+                if (cleanValue != newValue)
+                {
+                    dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = cleanValue }; // Default value
+                }
+                else if (dateRow && !string.IsNullOrEmpty(newValue))
+                {
+                    dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue }; // Default value
+                    //updateOperationsTotalCell(e.ColumnIndex, e.RowIndex, dataGridView, newValue);
+                }
+            }
+        }
+
+        private void updateOperationsTotalCell(int columnIndex, int rowIndex, DataGridView dataGridView, string newValue)
+        {
+            if(string.IsNullOrEmpty(newValue))
+            {
+                return;
+            }
+            string saleCode = (string)dataGridView[columnIndex, 0].Value;
+
+            SyncLinkedDictionary<object, object> saleCodeContent = selectedTabModel.Get(saleCode);
+            if (saleCodeContent != null)
+            {
+                string date = (string)dataGridView[0, rowIndex].Value;
+                DateTime convertedDateTime = DateTime.ParseExact(date, OPERATION_DATE_FORMAT, System.Globalization.CultureInfo.InvariantCulture);
+
+                object oldVallue = saleCodeContent.Get(convertedDateTime);
+
+                if (oldVallue != null)
+                {
+                    saleCodeContent.Update(convertedDateTime, int.Parse(newValue), oldVallue);
+                }
+                else
+                {
+                    saleCodeContent.Add(convertedDateTime, int.Parse(newValue));
+                }
+
+                int total = OperationsPlanningServiceImpl.getTotal(saleCode, selectedTabModel);
+
+                saleCodeContent.Add(OperationsPlanningServiceImpl.TOTAL, int.Parse(newValue));
+
+                dataGridView[columnIndex, dataGridView.RowCount - 1].Value = total;
+                isModelUpdated = true;
+            }
+        }
+
+        private void OnDataGridView_CellOperationEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (sender is DataGridView dataGridView)
+            {
+                // Check if there's a pending update from validation
+                var updateInfo = dataGridView.Tag as CellUpdateInfo;
+                if (updateInfo != null && updateInfo.RowIndex == e.RowIndex && updateInfo.ColumnIndex == e.ColumnIndex)
+                {
+                    // Update the cell value
+                    dataGridView.Rows[updateInfo.RowIndex].Cells[updateInfo.ColumnIndex].Value = updateInfo.NewValue;
+
+                    //recalculate the total
+                    updateOperationsTotalCell(updateInfo.ColumnIndex, updateInfo.RowIndex, dataGridView, (string)updateInfo.NewValue);
+
+                    // Clear the tag
+                    dataGridView.Tag = null;
+                }
+            }
+        }
 
         //private async void AddTab(string menuName)
         //{

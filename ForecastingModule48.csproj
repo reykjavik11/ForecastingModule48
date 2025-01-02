@@ -146,6 +146,7 @@
     <Compile Include="Form\LoginForm.Designer.cs">
       <DependentUpon>LoginForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Helper\CellUpdateInfo.cs" />
     <Compile Include="Helper\SyncLinkedDictionary.cs" />
     <Compile Include="Model\UserDto.cs" />
     <Compile Include="Program.cs" />
