@@ -17,5 +17,7 @@ namespace ForecastingModule.Service
         /// <param name="equipmentName"></param>
         /// <returns></returns>
         SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> retrieveExistedOperationsPlanning(string equipmentName);
+        int save(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data);
+
     }
 }

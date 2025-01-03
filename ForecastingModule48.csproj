@@ -169,6 +169,7 @@
     <Compile Include="Service\Impl\UserServiceImpl.cs" />
     <Compile Include="Service\UserService.cs" />
     <Compile Include="Helper\Optional.cs" />
+    <Compile Include="Util\DateUtil.cs" />
     <Compile Include="Util\Validator.cs" />
     <Compile Include="Util\DataGridHelper.cs" />
     <Compile Include="Util\SystemInfo.cs" />

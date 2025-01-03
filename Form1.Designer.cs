@@ -42,6 +42,9 @@ namespace ForecastingModule
         private SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> selectedTabModel;
         private bool isModelUpdated = false;
         private readonly static string OPERATION_DATE_FORMAT = "MMM-yy";
+        private StatusStrip statusStrip;
+        private Panel butomButtonPanel;
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -115,7 +118,15 @@ namespace ForecastingModule
             };
 
             // Left Panel - Dynamicly Generated Buttons
-            GenerateMenuButtons(tabList);
+            try
+            {
+                GenerateMenuButtons(tabList);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                log.LogError(ex.StackTrace);
+            }
 
             // Right Panel - Tabs and other elements
             tabControl = new TabControl
@@ -124,8 +135,6 @@ namespace ForecastingModule
                 //Alignment = System.Windows.Forms.TabAlignment.Bottom //Uncoment when need same desiign like in task, but Top aligment (as is) is user friendly
             };
             splitContainer.Panel2.Controls.Add(tabControl);
-            splitContainer.Panel2.Controls.Add(createStatusStrip());
-
 
             // Add SplitContainer to the Form
             this.Controls.Add(splitContainer);
@@ -134,9 +143,104 @@ namespace ForecastingModule
             this.WindowState = FormWindowState.Maximized;
         }
 
+        private Panel createOperattionButtonsPanel()
+        {
+            Panel operationButtonsPanel = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                Height = 50,
+                //BackColor = Color.LightGray
+            };
+
+            Button operationSetting = null;
+            Button saveOperations = null;
+            if (UserSession.GetInstance().User.accessOperationsSettings)
+            {
+                operationSetting = new Button
+                {
+                    Size = new Size(80, 40)
+                };
+                // Set the gear icon using the system icon
+                Icon gearIcon = SystemIcons.Application; // Replace with a gear icon from your resources if needed
+                operationSetting.Image = gearIcon.ToBitmap();
+                operationSetting.TextImageRelation = TextImageRelation.ImageBeforeText;
+
+                operationSetting.Click += OnOperationsSettingsButtons_Click;
+                operationButtonsPanel.Controls.Add(operationSetting);
+            }
+            if (UserSession.GetInstance().User.accessOperationsPlanning)
+            {
+                saveOperations = new Button
+                {
+                    Text = "SAVE",
+                    Anchor = AnchorStyles.None,
+                    Size = new Size(100, 40)
+                };
+                saveOperations.Click += OnSaveOperationButtons_ClickAsync;
+                operationButtonsPanel.Controls.Add(saveOperations);
+            }
+
+            // Center the buttons horizontally in the panel and reduce the spacing
+            operationButtonsPanel.Paint += (sender, e) =>
+            {
+                if (operationSetting != null && saveOperations != null)
+                {
+                    int panelWidth = operationButtonsPanel.ClientSize.Width;
+                    int buttonSpacing = 8; // Smaller spacing for closer buttons
+
+                    int totalWidth = operationSetting.Width + saveOperations.Width + buttonSpacing;
+                    int startX = (panelWidth - totalWidth) / 2;
+
+                    operationSetting.Location = new Point(startX, (operationButtonsPanel.Height - operationSetting.Height) / 2);
+                    saveOperations.Location = new Point(startX + operationSetting.Width + buttonSpacing, (operationButtonsPanel.Height - saveOperations.Height) / 2);
+                }
+            };
+
+            return operationButtonsPanel;
+        }
+
+        private void OnOperationsSettingsButtons_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show("Operations Planning Setting have not implemented yet.");
+        }
+
+        private async void OnSaveOperationButtons_ClickAsync(object sender, EventArgs e)
+        {
+            await saveOperationPlanning();
+        }
+
+        private async Task saveOperationPlanning()
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    this.log.LogInfo($"Saving Operations Plannig data from {selectedTab} -> {selectedSubTab}");
+                    int insertedRows = operationService.save(selectedTabModel);
+                    Invoke((Action)(() =>
+                    {
+                        this.log.LogInfo($"Operations Plannig data from {selectedTab} -> {selectedSubTab} has been saved successfully. Inserted {insertedRows} rows.");
+                        this.statusLabel.Text = $"Operations Plannig data from {selectedTab} -> {selectedSubTab} has been saved successfully.";
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        this.log.LogError($"Error saving Operations Plannig data: {selectedTab} -> {selectedSubTab}: " + ex.Message);
+                        MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        this.statusLabel.Text = $"Error saving Operations Plannig data: {selectedTab} -> {selectedSubTab}.";
+                        this.statusLabel.ForeColor = Color.Red;
+                        return;
+                    }));
+                }
+            });
+        }
+
+
         private StatusStrip createStatusStrip()
         {
-            var statusStrip = new StatusStrip
+            statusStrip = new StatusStrip
             {
                 Dock = DockStyle.Bottom // Dock it to the bottom
             };
@@ -188,8 +292,6 @@ namespace ForecastingModule
             if (sender is Button button)
             {
                 clear();
-                //this.statusLabel.ForeColor = Color.LimeGreen;
-                this.statusLabel.ForeColor = Color.DarkBlue;
 
                 ((Control)button).Focus();
 
@@ -200,7 +302,11 @@ namespace ForecastingModule
 
         private void clear()
         {
-            this.statusLabel.Text = string.Empty;
+            if (this.statusLabel != null)
+            {
+                this.statusLabel.Text = string.Empty;
+                this.statusLabel.ForeColor = Color.DarkBlue;
+            }
             selectedSubTab = string.Empty;
             selectedTabModel = null;
             isModelUpdated = false;
@@ -216,6 +322,10 @@ namespace ForecastingModule
             if (menuName == ITEM_OPERATION_PLANNING)
             {
                 await populateSubTabs();
+
+                //add panal with Operation Planning buttons (if accessible)
+                butomButtonPanel = createOperattionButtonsPanel();
+                splitContainer.Panel2.Controls.Add(butomButtonPanel);
             }
             else if (menuName == "MANAGE")
             {
@@ -225,6 +335,8 @@ namespace ForecastingModule
             {
                 await populateSubTabs(menuName);
             }
+            statusStrip = createStatusStrip();
+            splitContainer.Panel2.Controls.Add(statusStrip);
         }
 
         private void populateManageTab(string menuName)
@@ -314,7 +426,7 @@ namespace ForecastingModule
             if (sender is TabControl tabControll && tabControl.SelectedTab != null)
             {
                 this.selectedSubTab = e.TabPage.Text;
-                log.LogInfo($"Sub Menu {tabControl.SelectedTab.Text} was clicked.");
+                log.LogInfo($"Sub Menu {tabControl.SelectedTab.Text} was clicked. [Menu is {selectedTab}].");
                 clear();//clear when selected on tab and subTab
                 generateDataGrid(e.TabPage, selectedTab, e.TabPage.Text);
             }
@@ -336,7 +448,7 @@ namespace ForecastingModule
                     log.LogWarning($"generateDataGrid: Number of retrieved columns: {numCoLumns}");
                 }
                 selectedTab.Controls.Clear();
-                
+
                 var dataGridView = new DataGridView
                 {
                     Dock = DockStyle.Fill,
@@ -484,14 +596,13 @@ namespace ForecastingModule
                 else if (dateRow && !string.IsNullOrEmpty(newValue))
                 {
                     dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue }; // Default value
-                    //updateOperationsTotalCell(e.ColumnIndex, e.RowIndex, dataGridView, newValue);
                 }
             }
         }
 
         private void updateOperationsTotalCell(int columnIndex, int rowIndex, DataGridView dataGridView, string newValue)
         {
-            if(string.IsNullOrEmpty(newValue))
+            if (string.IsNullOrEmpty(newValue))
             {
                 return;
             }
@@ -661,6 +772,18 @@ namespace ForecastingModule
             }
             tabControl.TabPages.Clear();
             tabControl.Selected -= OnSelectedOperationPlaningModelTab;
+            tabControl.Selecting -= OnChangeTheTab;
+
+            if (butomButtonPanel != null)
+            {
+                splitContainer.Panel2.Controls.Remove(butomButtonPanel);
+                butomButtonPanel.Dispose();
+            }
+            if (statusStrip != null)
+            {
+                splitContainer.Panel2.Controls.Remove(statusStrip);
+                statusStrip.Dispose();
+            }
         }
 
         #endregion

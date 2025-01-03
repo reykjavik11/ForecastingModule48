@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
 using ForecastingModule.Helper;
+using ForecastingModule.Util;
 using ForecastingModule.Utilities;
 
 namespace ForecastingModule.Repository.Impl
 {
     internal class OperationsPlanningRepositoryImpl : OperationsPlanningRepository
     {
+        public const string SC_MODEL = "SC_Model";
         private readonly string connectionString = (string)ConfigFileManager.Instance.Read(ConfigFileManager.KEY_HOST);
         private readonly Logger log = Logger.Instance;
 
@@ -78,18 +82,14 @@ namespace ForecastingModule.Repository.Impl
                                     syncLinkedDictionary = new SyncLinkedDictionary<object, object>();
 
                                     //constant data here
-                                    syncLinkedDictionary.Add("SC_Model", reader.GetString(reader.GetOrdinal("SC_Model")));
+                                    syncLinkedDictionary.Add(SC_MODEL, reader.GetString(reader.GetOrdinal("SC_Model")));
                                     syncLinkedDictionary.Add("HIDEN_KEYS", new List<string> { "SC_Model" });
 
                                     result.Add(salesCode, syncLinkedDictionary);
                                 }
-                                //else
-                                //{   
-                                    //set dynamic data here
-                                    DateTime dateKey = reader.GetDateTime(reader.GetOrdinal("OP_Date"));
-                                    int quantity = reader.GetInt32(reader.GetOrdinal("OP_Quantity"));
-                                    syncLinkedDictionary.Add(dateKey, quantity);
-                                //}
+                                DateTime dateKey = reader.GetDateTime(reader.GetOrdinal("OP_Date"));
+                                int quantity = reader.GetInt32(reader.GetOrdinal("OP_Quantity"));
+                                syncLinkedDictionary.Add(dateKey, quantity);
                             }
                         }
                     }
@@ -101,6 +101,146 @@ namespace ForecastingModule.Repository.Impl
                 throw ex;
             }
             return result;
+        }
+
+        public int saveOperationsPlanning(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data)
+        {
+            int insertedRows = 0;
+            if (data == null)
+            {
+                log.LogWarning($"OperationsPlanningRepositoryImpl -> saveOperationsPlanning: Operation model is null");
+                return insertedRows;
+            }
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                SqlTransaction transaction = connection.BeginTransaction();
+
+                List<string> salesCodesKeys = data.Keys.ToList();
+                HashSet<string> opModelSet = getModelSet(data, salesCodesKeys);
+
+                List<string> opModelList = new List<string>(opModelSet);
+                try
+                {
+                    // Delete Command
+                    StringBuilder deleteQuery = generateDeleteQuery(opModelList);
+
+                    int deletedRows = 0;
+                    using (SqlCommand deleteCommand = new SqlCommand(deleteQuery.ToString(), connection, transaction))
+                    {
+                        // Add parameters for each ID
+                        for (int i = 0; i < opModelList.Count; i++)
+                        {
+                            deleteCommand.Parameters.AddWithValue($"@DeleteId{i}", opModelList[i]);
+                        }
+
+                        deletedRows = deleteCommand.ExecuteNonQuery();
+                    }
+                    //End Delete Command
+                    string insertQueries = generateInsertQueries(data, salesCodesKeys);
+
+                    //Insert Command
+                    using (SqlCommand insertCommand = new SqlCommand(insertQueries, connection, transaction))
+                    {
+                        insertCommands(data, salesCodesKeys, insertCommand);
+                        insertedRows = insertCommand.ExecuteNonQuery();
+                    }
+                    transaction.Commit();//TODO uncoment layter
+                    log.LogInfo($"Save OperationsPlanningRepositoryImpl - Deleted {deletedRows} rows. Inserted {insertedRows}");
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    log.LogError(ex.StackTrace);
+                    throw ex;
+                }
+            }
+            return insertedRows;
+        }
+
+        private static void insertCommands(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys, SqlCommand insertCommand)
+        {
+            foreach (string saleCode in salesCodesKeys)
+            {
+                SyncLinkedDictionary<object, object> valuesDictionaryBySaleCode = data.Get(saleCode);
+                if (valuesDictionaryBySaleCode != null)
+                {
+                    List<object> valuesKeys = valuesDictionaryBySaleCode.Keys.ToList();
+                    foreach (var key in valuesKeys)
+                    {
+                        if (key is DateTime)
+                        {
+                            insertCommand.Parameters.Clear();//TODO bug here, looks like commit last lane 
+
+                            object count = valuesDictionaryBySaleCode.Get(key);
+                            insertCommand.Parameters.AddWithValue("@OP_RecordID", Guid.NewGuid());
+                            insertCommand.Parameters.AddWithValue("@OP_Base", saleCode);
+                            insertCommand.Parameters.AddWithValue("@OP_Date", key);
+                            insertCommand.Parameters.AddWithValue("@OP_ForecastDate", DateUtil.calculateForecastDay((DateTime)key));
+                            insertCommand.Parameters.AddWithValue("@OP_Quantity", valuesDictionaryBySaleCode.Get(key));
+                            insertCommand.Parameters.AddWithValue("@OP_Model", valuesDictionaryBySaleCode.Get(SC_MODEL));
+                        }
+                    }
+                }
+            }
+        }
+
+        private static string generateInsertQueries(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys)
+        {
+            string insertQueries = "INSERT INTO [dbo].[OperationsPlanning] ([OP_RecordID], [OP_Base], [OP_Date], [OP_ForecastDate], [OP_Quantity] ,[OP_Model]) VALUES ";
+            List<string> parameters = new List<string>();
+            foreach (string saleCode in salesCodesKeys)
+            {
+                SyncLinkedDictionary<object, object> valuesDictionaryBySaleCode = data.Get(saleCode);
+                if (valuesDictionaryBySaleCode != null)
+                {
+                    List<object> valuesKeys = valuesDictionaryBySaleCode.Keys.ToList();
+                    foreach (var key in valuesKeys)
+                    {
+                        if (key is DateTime)
+                        {
+                            parameters.Add("(@OP_RecordID, @OP_Base, @OP_Date, @OP_ForecastDate, @OP_Quantity, @OP_Model)");
+                        }
+                    }
+                }
+            }
+            insertQueries += string.Join(", ", parameters);
+            return insertQueries;
+        }
+
+        private static HashSet<string> getModelSet(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys)
+        {
+            HashSet<String> opModelSet = new HashSet<string>();
+
+            foreach (string saleCode in salesCodesKeys)
+            {
+                SyncLinkedDictionary<object, object> valuesDictionaryBySaleCode = data.Get(saleCode);
+                if (valuesDictionaryBySaleCode != null)
+                {
+                    string scModel = (string)valuesDictionaryBySaleCode.Get(SC_MODEL);
+                    if (scModel != null)
+                    {
+                        opModelSet.Add(scModel);
+                    }
+                }
+            }
+
+            return opModelSet;
+        }
+
+        private static StringBuilder generateDeleteQuery(List<string> opModelList)
+        {
+            StringBuilder deleteQuery = new StringBuilder($"DELETE FROM [dbo].[OperationsPlanning] WHERE [OP_Model] in (");
+            for (int i = 0; i < opModelList.Count; i++)
+            {
+                deleteQuery.Append($"@DeleteId{i}");
+                if (i < opModelList.Count - 1)
+                {
+                    deleteQuery.Append(", ");
+                }
+            }
+            deleteQuery.Append(")");
+            return deleteQuery;
         }
     }
 }

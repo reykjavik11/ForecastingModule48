@@ -68,5 +68,18 @@ namespace ForecastingModule.Service.Impl
 
             return sum;
         }
+
+        public int save(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data)
+        {
+            try
+            {
+                return repositoryImpl.saveOperationsPlanning(data);
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.LogError(ex.StackTrace); 
+                throw ex;
+            }
+        }
     }
 }

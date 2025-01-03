@@ -29,5 +29,7 @@ namespace ForecastingModule.Repository
 	order by sc.SC_SalesCode   
         */
         SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> retrieveExistedOperationsPlanning(string equipmentName);
+
+        int saveOperationsPlanning(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data);
     }
 }
