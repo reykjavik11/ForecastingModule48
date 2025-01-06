@@ -221,6 +221,7 @@ namespace ForecastingModule
                     {
                         this.log.LogInfo($"Operations Plannig data from {selectedTab} -> {selectedSubTab} has been saved successfully. Inserted {insertedRows} rows.");
                         this.statusLabel.Text = $"Operations Plannig data from {selectedTab} -> {selectedSubTab} has been saved successfully.";
+                        this.isModelUpdated = false;
                     }));
                 }
                 catch (Exception ex)
@@ -305,7 +306,8 @@ namespace ForecastingModule
             if (this.statusLabel != null)
             {
                 this.statusLabel.Text = string.Empty;
-                this.statusLabel.ForeColor = Color.DarkBlue;
+                //this.statusLabel.ForeColor = Color.DarkBlue;
+                this.statusLabel.ForeColor = Color.LimeGreen;
             }
             selectedSubTab = string.Empty;
             selectedTabModel = null;

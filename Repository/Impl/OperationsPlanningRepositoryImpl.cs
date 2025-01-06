@@ -160,6 +160,7 @@ namespace ForecastingModule.Repository.Impl
 
         private static void insertCommands(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys, SqlCommand insertCommand)
         {
+            int index = 0;
             foreach (string saleCode in salesCodesKeys)
             {
                 SyncLinkedDictionary<object, object> valuesDictionaryBySaleCode = data.Get(saleCode);
@@ -170,15 +171,18 @@ namespace ForecastingModule.Repository.Impl
                     {
                         if (key is DateTime)
                         {
-                            insertCommand.Parameters.Clear();//TODO bug here, looks like commit last lane 
-
                             object count = valuesDictionaryBySaleCode.Get(key);
-                            insertCommand.Parameters.AddWithValue("@OP_RecordID", Guid.NewGuid());
-                            insertCommand.Parameters.AddWithValue("@OP_Base", saleCode);
-                            insertCommand.Parameters.AddWithValue("@OP_Date", key);
-                            insertCommand.Parameters.AddWithValue("@OP_ForecastDate", DateUtil.calculateForecastDay((DateTime)key));
-                            insertCommand.Parameters.AddWithValue("@OP_Quantity", valuesDictionaryBySaleCode.Get(key));
-                            insertCommand.Parameters.AddWithValue("@OP_Model", valuesDictionaryBySaleCode.Get(SC_MODEL));
+                            var guid = Guid.NewGuid();
+                            insertCommand.Parameters.AddWithValue($"@OP_RecordID{index}", guid);
+                            insertCommand.Parameters.AddWithValue($"@OP_Base{index}", saleCode);
+                            insertCommand.Parameters.AddWithValue($"@OP_Date{index}", key);
+
+                            DateTime forecastDate = DateUtil.calculateForecastDay((DateTime)key);
+                            insertCommand.Parameters.AddWithValue($"@OP_ForecastDate{index}", forecastDate);
+                            insertCommand.Parameters.AddWithValue($"@OP_Quantity{index}", count);
+                            var model = valuesDictionaryBySaleCode.Get(SC_MODEL);
+                            insertCommand.Parameters.AddWithValue($"@OP_Model{index}", model);
+                            index++;
                         }
                     }
                 }
@@ -187,8 +191,9 @@ namespace ForecastingModule.Repository.Impl
 
         private static string generateInsertQueries(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys)
         {
-            string insertQueries = "INSERT INTO [dbo].[OperationsPlanning] ([OP_RecordID], [OP_Base], [OP_Date], [OP_ForecastDate], [OP_Quantity] ,[OP_Model]) VALUES ";
+            string insertQueries = "INSERT INTO [dbo].[OperationsPlanning] (OP_RecordID, OP_Base, OP_Date, OP_ForecastDate, OP_Quantity, OP_Model) VALUES ";
             List<string> parameters = new List<string>();
+            int index = 0;
             foreach (string saleCode in salesCodesKeys)
             {
                 SyncLinkedDictionary<object, object> valuesDictionaryBySaleCode = data.Get(saleCode);
@@ -199,7 +204,8 @@ namespace ForecastingModule.Repository.Impl
                     {
                         if (key is DateTime)
                         {
-                            parameters.Add("(@OP_RecordID, @OP_Base, @OP_Date, @OP_ForecastDate, @OP_Quantity, @OP_Model)");
+                            parameters.Add($"(@OP_RecordID{index}, @OP_Base{index}, @OP_Date{index}, @OP_ForecastDate{index}, @OP_Quantity{index}, @OP_Model{index})");
+                            index++;
                         }
                     }
                 }
