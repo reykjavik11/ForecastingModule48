@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 
 namespace ForecastingModule.Util
 {
@@ -7,7 +8,7 @@ namespace ForecastingModule.Util
     {
         private DataGridHelper() { }
 
-        public static List<DateTime> GenerateDateList(DateTime startDate, int nDays, int nMonths)
+        public static List<DateTime> GenerateDateList(DateTime startDate, int nDays, int nMonths, bool operationPlanning = true)
         {
             List<DateTime> dates = new List<DateTime>();
 

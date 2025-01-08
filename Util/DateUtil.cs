@@ -1,4 +1,5 @@
 ﻿using System;
+using OfficeOpenXml.FormulaParsing.Excel.Functions.DateTime;
 
 namespace ForecastingModule.Util
 {
@@ -6,13 +7,9 @@ namespace ForecastingModule.Util
     {
         private DateUtil() { }
 
-        public static DateTime calculateForecastDay(DateTime operationDate)
+        public static DateTime toForecastDay(DateTime operationDate)
         {
-            if(operationDate == null)
-            {
-                throw new ArgumentException("DateUtil.calculateForecastDay - operationDate is null");
-            }
-            // Find the first day of the operation month
+            //Find the first day of the operation month
             DateTime firstDayOfCurrentMonth = new DateTime(operationDate.Year, operationDate.Month, 1);
 
             // Get the last day of the previous month
@@ -29,6 +26,15 @@ namespace ForecastingModule.Util
 
             DateTime lastMondayOfPreviousMonth = lastDayOfPreviousMonth.AddDays(-daysSinceMonday);
             return lastMondayOfPreviousMonth;
+        }
+
+        public static DateTime toOperationPlanningDay(DateTime forecastDate)
+        {
+            forecastDate = forecastDate.AddMonths(1);
+
+            forecastDate = new DateTime(forecastDate.Year, forecastDate.Month, 1);
+
+            return forecastDate;
         }
     }
 }

@@ -33,7 +33,7 @@ namespace ForecastingModule.Repository.Impl
                 {
                     connection.Open();
 
-                    using (var command = new SqlCommand($"select op.OPS_NbrDays, op.OPS_NbrMonths, op.OPS_Comments FROM [WeilerForecasting].[dbo].[OperationsSettings] op where op.OPS_Tab ='{equipmentName}' and op.OPS_ActiveFlag=1", connection))
+                    using (var command = new SqlCommand($"select IsNull(op.OPS_Tab, '') as OPS_Tab, IsNull(op.OPS_NbrDays, 0) as OPS_NbrDays, IsNull(op.OPS_NbrMonths, 0) as OPS_NbrMonths, IsNull(op.OPS_Comments, '') as OPS_Comments  FROM [WeilerForecasting].[dbo].[OperationsSettings] op  join (SELECT distinct [SC_OperationsTab], [SC_ForecastTab]  FROM [WeilerForecasting].[dbo].[SalesCodes]) sc on sc.SC_OperationsTab=op.OPS_Tab  where sc.SC_ForecastTab ='{equipmentName}' and op.OPS_ActiveFlag=1", connection))
                     {
                         using (var reader = command.ExecuteReader())
                         {
@@ -68,7 +68,7 @@ namespace ForecastingModule.Repository.Impl
                 {
                     connection.Open();
                     //must be ordering - return structure is linked depend by ordering elements
-                    using (var command = new SqlCommand($"select sc.SC_SalesCode, op.OP_Date, op.OP_Quantity, sc.SC_Model from (select SC_SalesCode, SC_Model, SC_OperationsTab from [WeilerForecasting].[dbo].[SalesCodes] where SC_BaseFlag=1) sc left join [WeilerForecasting].[dbo].[OperationsPlanning] op on op.OP_Model = sc.SC_Model left join [WeilerForecasting].[dbo].[OperationsSettings] os on os.OPS_Tab = sc.SC_OperationsTab where sc.SC_OperationsTab='{equipmentName}' and op.OP_Date between DATEFROMPARTS(YEAR(DATEADD(day, os.OPS_NbrDays, GETDATE())), MONTH(DATEADD(day, os.OPS_NbrDays, GETDATE())), 1) and EOMONTH(DATEADD(month, os.OPS_NbrMonths, GETDATE())) order by sc.SC_SalesCode", connection))
+                    using (var command = new SqlCommand($"select IsNull(sc.SC_SalesCode, '') as SC_SalesCode, op.OP_Date, IsNull(op.OP_Quantity, 0) as OP_Quantity, IsNull(sc.SC_Model, '') as SC_Model from (select SC_SalesCode, SC_Model, SC_OperationsTab from [WeilerForecasting].[dbo].[SalesCodes] where SC_BaseFlag=1) sc left join [WeilerForecasting].[dbo].[OperationsPlanning] op on op.OP_Model = sc.SC_Model left join [WeilerForecasting].[dbo].[OperationsSettings] os on os.OPS_Tab = sc.SC_OperationsTab where sc.SC_OperationsTab='{equipmentName}' and op.OP_Date between DATEFROMPARTS(YEAR(DATEADD(day, os.OPS_NbrDays, GETDATE())), MONTH(DATEADD(day, os.OPS_NbrDays, GETDATE())), 1) and EOMONTH(DATEADD(month, os.OPS_NbrMonths, GETDATE())) order by SC_SalesCode", connection))
                     {
                         using (var reader = command.ExecuteReader())
                         {
@@ -87,9 +87,13 @@ namespace ForecastingModule.Repository.Impl
 
                                     result.Add(salesCode, syncLinkedDictionary);
                                 }
-                                DateTime dateKey = reader.GetDateTime(reader.GetOrdinal("OP_Date"));
-                                int quantity = reader.GetInt32(reader.GetOrdinal("OP_Quantity"));
-                                syncLinkedDictionary.Add(dateKey, quantity);
+
+                                Nullable<DateTime> nullableDateTime = DataReaderExtensions.GetNullableValue<DateTime>(reader, "OP_Date");
+                                if (nullableDateTime.HasValue)
+                                {
+                                    int quantity = reader.GetInt32(reader.GetOrdinal("OP_Quantity"));
+                                    syncLinkedDictionary.Add(nullableDateTime.Value, quantity);
+                                }
                             }
                         }
                     }
@@ -177,7 +181,7 @@ namespace ForecastingModule.Repository.Impl
                             insertCommand.Parameters.AddWithValue($"@OP_Base{index}", saleCode);
                             insertCommand.Parameters.AddWithValue($"@OP_Date{index}", key);
 
-                            DateTime forecastDate = DateUtil.calculateForecastDay((DateTime)key);
+                            DateTime forecastDate = DateUtil.toForecastDay((DateTime)key);
                             insertCommand.Parameters.AddWithValue($"@OP_ForecastDate{index}", forecastDate);
                             insertCommand.Parameters.AddWithValue($"@OP_Quantity{index}", count);
                             var model = valuesDictionaryBySaleCode.Get(SC_MODEL);

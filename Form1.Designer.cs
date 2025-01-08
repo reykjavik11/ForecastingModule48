@@ -13,13 +13,15 @@ using ForecastingModule.Utilities;
 
 namespace ForecastingModule
 {
-    partial class Form1
+    public partial class Form1
     {
         private const string ITEM_OPERATION_PLANNING = "OPERATIONS PLANNING";
         private const string ITEM_MANANGE = "MANAGE";
         private SplitContainer splitContainer;
         private TabControl tabControl;
         private ToolStripStatusLabel statusLabel;
+        private StatusStrip statusStrip;
+        private Panel butomButtonPanel;
 
         public readonly Font TEXT_FONT = new Font("Arial", 9, FontStyle.Bold);
 
@@ -28,6 +30,7 @@ namespace ForecastingModule
 
         private readonly DatabaseHelper db = DatabaseHelper.Instance;
         private readonly OperationsPlanningServiceImpl operationService = OperationsPlanningServiceImpl.Instance;
+        private readonly ForecastServiceImpl forecastService = ForecastServiceImpl.Instance;
 
         ///  Required designer variable.
         private System.ComponentModel.IContainer components = null;
@@ -42,8 +45,7 @@ namespace ForecastingModule
         private SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> selectedTabModel;
         private bool isModelUpdated = false;
         private readonly static string OPERATION_DATE_FORMAT = "MMM-yy";
-        private StatusStrip statusStrip;
-        private Panel butomButtonPanel;
+        private readonly static string FORECAST_DATE_FORMAT = "MM/dd/yy";
 
         protected override void Dispose(bool disposing)
         {
@@ -201,7 +203,7 @@ namespace ForecastingModule
 
         private void OnOperationsSettingsButtons_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Operations Planning Setting have not implemented yet.");
+            MessageBox.Show("Operations Planning Setting has not implemented yet.");
         }
 
         private async void OnSaveOperationButtons_ClickAsync(object sender, EventArgs e)
@@ -251,8 +253,7 @@ namespace ForecastingModule
                 Text = "",
                 Spring = true, // Ensures it takes up available space
                 TextAlign = ContentAlignment.MiddleRight, // Align to bottom-right
-                ForeColor = Color.LimeGreen,
-                //BackColor = Color.White
+                ForeColor = Color.DarkBlue,
             };
 
             statusStrip.Items.Add(statusLabel);
@@ -306,8 +307,7 @@ namespace ForecastingModule
             if (this.statusLabel != null)
             {
                 this.statusLabel.Text = string.Empty;
-                //this.statusLabel.ForeColor = Color.DarkBlue;
-                this.statusLabel.ForeColor = Color.LimeGreen;
+                this.statusLabel.ForeColor = Color.DarkBlue;
             }
             selectedSubTab = string.Empty;
             selectedTabModel = null;
@@ -320,6 +320,8 @@ namespace ForecastingModule
             clearTabsAndContents();
 
             selectedTab = menuName;
+
+            setSelectedTabToWindowTextBar();
 
             if (menuName == ITEM_OPERATION_PLANNING)
             {
@@ -341,6 +343,19 @@ namespace ForecastingModule
             splitContainer.Panel2.Controls.Add(statusStrip);
         }
 
+        private void setSelectedTabToWindowTextBar()
+        {
+            if (selectedTab != null && !string.IsNullOrEmpty(this.Text))
+            {
+                int index = this.Text.LastIndexOf("]");
+                if (index > 0)
+                {
+                    string mainHeaderText = this.Text.Substring(0, index + 1);
+                    this.Text = mainHeaderText + $" -> {selectedTab}";
+                }
+            }
+        }
+
         private void populateManageTab(string menuName)
         {
             var tabPage = new TabPage(menuName);
@@ -353,55 +368,6 @@ namespace ForecastingModule
             tabPage.Controls.Add(label);
             tabControl.TabPages.Add(tabPage);
             tabControl.SelectedTab = tabPage;
-        }
-
-        private async Task populateSubTabs(string menuName = null)
-        {
-            await Task.Run(() =>
-            {
-                try
-                {
-                    List<string> forecastSubTabs = menuName != null ? SubTabRepositoryForecastImpl.Instance.getActiveSubTabs(menuName)
-                    : SubTabRepositoryOperationsImpl.Instance.getActiveSubTabs();
-
-                    Invoke((Action)(() =>
-                    {
-                        List<TabPage> tabList = new List<TabPage>(forecastSubTabs.Count);
-                        foreach (var tabName in forecastSubTabs)
-                        {
-                            var mtvTab = new TabPage(tabName);
-                            tabControl.TabPages.Add(mtvTab);
-
-                            tabList.Add(mtvTab);
-                        }
-
-                        tabControl.Selected += OnSelectedOperationPlaningModelTab;
-
-                        tabControl.Selecting += OnChangeTheTab;
-
-                        var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
-                        if (firstSubTab != null)
-                        {
-                            tabControl.SelectedTab = firstSubTab; // Focus the new tab
-
-                            TabControlEventArgs args = new TabControlEventArgs(firstSubTab, 0, TabControlAction.Selected);
-                            OnSelectedOperationPlaningModelTab(tabControl, args);
-                        }
-
-                    }));
-                }
-                catch (Exception ex)
-                {
-                    Invoke((Action)(() =>
-                    {
-                        this.log.LogError(ex.Message);
-                        MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        this.statusLabel.Text = "Population of SubTabs failed.";
-                        this.statusLabel.ForeColor = Color.Red;
-                        return;
-                    }));
-                }
-            });
         }
 
         private void OnChangeTheTab(object sender, TabControlCancelEventArgs e)
@@ -478,7 +444,7 @@ namespace ForecastingModule
                 if (!readOnlyMode)
                 {
                     // set first row and first column to read only and last TOTAL row
-                    dataGridView.CellBeginEdit += OnDataGridView_PreventCellBeginEdit;
+                    dataGridView.CellBeginEdit += OnDataGridView_PreventOperationCellBeginEdit;
                 }
 
                 populateOperationPlanningGrid(selectedSubTabName, headerSaleCodes, dataGridView);
@@ -488,10 +454,11 @@ namespace ForecastingModule
             {
                 this.selectedSubTab = selectedSubTabName;
                 log.LogInfo($"Generating Forecast DataGridView for '{selectedSubTabName}' moodel");
+                generateForecastDataGrid(selectedTab, selectedTabName, selectedSubTabName);
             }
             else if (ITEM_MANANGE == selectedSubTabName)
             {
-                log.LogInfo($"Grip on Manage will be there.");
+                log.LogInfo($"Grid on Manage will be there.");
             }
         }
 
@@ -508,7 +475,7 @@ namespace ForecastingModule
                 headerSaleCodes.Insert(0, "");
                 dataGridView.Rows.Add(headerSaleCodes.ToArray());//add header line
 
-                List<object> totalRow = new List<object> { OperationsPlanningServiceImpl.TOTAL };
+                List<object> totalRow = new List<object> { Calculation.TOTAL };
 
                 foreach (var date in dateTimes)//add other lines with values
                 {
@@ -523,7 +490,7 @@ namespace ForecastingModule
                             object number = valuesByCode.Get(date);
                             contentRow.Add(number);
 
-                            object total = valuesByCode.Get(OperationsPlanningServiceImpl.TOTAL);
+                            object total = valuesByCode.Get(Calculation.TOTAL);
                             if (total != null)
                             {
                                 totalRow.Add(total);
@@ -538,7 +505,7 @@ namespace ForecastingModule
             }
             else
             {//IF operattion setting did not set up correctly
-                log.LogWarning("Operattion setting did not set up correctly.");
+                log.LogWarning("Operations Planning: Operattion setting did not set up correctly.");
             }
         }
 
@@ -568,7 +535,7 @@ namespace ForecastingModule
             //}
         }
 
-        private void OnDataGridView_PreventCellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        private void OnDataGridView_PreventOperationCellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
         {
             // Block editing for the first row(sale codes HEADER) or first column (period column) or last row (TOTAL)
             if (sender is DataGridView dataGrid)
@@ -590,14 +557,14 @@ namespace ForecastingModule
 
                 string cleanValue = Validator.RemoveNonNumericCharacters(newValue);
 
-                bool dateRow = !(dataGridView.RowCount - 1 == e.RowIndex || e.RowIndex == 0); //last dataGridView.RowCount - 1 - TOTAL first row, or first empty row 
+                bool dataRow = !(dataGridView.RowCount - 1 == e.RowIndex || e.RowIndex == 0); //last dataGridView.RowCount - 1 - TOTAL first row, or first empty row 
                 if (cleanValue != newValue)
                 {
-                    dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = cleanValue }; // Default value
+                    dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = cleanValue }; 
                 }
-                else if (dateRow && !string.IsNullOrEmpty(newValue))
+                else if (dataRow && !string.IsNullOrEmpty(newValue))
                 {
-                    dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue }; // Default value
+                    dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue };
                 }
             }
         }
@@ -627,9 +594,9 @@ namespace ForecastingModule
                     saleCodeContent.Add(convertedDateTime, int.Parse(newValue));
                 }
 
-                int total = OperationsPlanningServiceImpl.getTotal(saleCode, selectedTabModel);
+                int total = Calculation.getSumBySalesCode(saleCode, selectedTabModel);
 
-                saleCodeContent.Add(OperationsPlanningServiceImpl.TOTAL, int.Parse(newValue));
+                saleCodeContent.Add(Calculation.TOTAL, int.Parse(newValue));
 
                 dataGridView[columnIndex, dataGridView.RowCount - 1].Value = total;
                 isModelUpdated = true;
@@ -655,116 +622,6 @@ namespace ForecastingModule
                 }
             }
         }
-
-        //private async void AddTab(string menuName)
-        //{
-        //    //check if if the tab already exist
-        //    foreach (TabPage existingTab in tabControl.TabPages)
-        //    {
-        //        if (existingTab.Text == menuName)
-        //        {
-        //            tabControl.SelectedTab = existingTab; // Focus the existing tab
-        //            return;
-        //        }
-        //    }
-
-        //    // Create a new tab page
-        //    var tabPage = new TabPage(menuName);
-
-        //    clearTabsAndContents();
-
-        //    if (menuName == "MTV" /*&& tabControl.TabPages.Count == 0*/)
-        //    {
-        //        List<TabPage> tabList = new List<TabPage>(subTabNameList.Count);
-
-        //        foreach (var tabName in subTabNameList)
-        //        {
-        //            var mtvTab = new TabPage(tabName);
-        //            var dataGridView = new DataGridView
-        //            {
-        //                Dock = DockStyle.Fill,
-        //                ColumnCount = 3
-        //            };
-        //            dataGridView.Rows.Add("Row 1", "Data 1", "Info 1");
-        //            dataGridView.Rows.Add("Row 2", "Data 2", "Info 2");
-        //            mtvTab.Controls.Add(dataGridView);
-
-        //            tabControl.TabPages.Add(mtvTab);
-
-        //            tabList.Add(mtvTab);
-
-        //            //tabControl.SelectedTab = mtvTab; // Focus the new tab
-        //        }
-
-        //        var firstSubTab = tabList.Count > 0? tabList[0] : null;
-        //        if (firstSubTab != null)
-        //        {
-        //            tabControl.SelectedTab = firstSubTab; // Focus the new tab
-        //        }
-
-        //        //TODO only for test DB connection
-        //        this.statusLabel.Text = "Trying to run query.";
-
-        //        await Task.Run(() =>
-        //        {
-        //            try
-        //            {
-        //                //db.ExecuteMySqlQuery("SELECT U.user_name, U.device_id FROM user U");
-        //                db.ExecuteQuery("select USR_UserName, USR_Access_OperationsPlanning FROM [WeilerForecasting].[dbo].[Users]");
-        //                Invoke((Action)(() =>
-        //                {
-        //                    this.statusLabel.Text = "Query been runed.";
-        //                }));
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                Invoke((Action)(() =>
-        //                {
-        //                    this.log.LogError(ex.Message);
-        //                    MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        //                    this.statusLabel.Text = "Query has been failed.";
-        //                    this.statusLabel.ForeColor = Color.Red;
-        //                    return;
-        //                }));
-        //            }
-        //        });
-
-        //        //End TODO only for test DB connection
-        //        return;
-        //    }
-        //    else if (menuName == "BROOM")
-        //    {
-        //        var testTab = new TabPage(menuName);
-
-        //        testDataGridView = new DataGridView
-        //        {
-        //            Dock = DockStyle.Fill,
-        //        };
-        //        testDataGridView.AllowUserToAddRows = false;
-
-        //        testDataGridView.DataSource = LoadExcelToDataTable("D:\\PROJECTS\\C#\\ForecastingModule48\\bin\\Debug\\mtv_example.xlsx");
-
-        //        testDataGridView.CellValueChanged += dataGridTestView_CellValueChanged;
-        //        testTab.Controls.Add(testDataGridView);
-
-        //        tabControl.TabPages.Add(testTab);
-        //        tabControl.SelectedTab = testTab; // Focus the new tab
-        //        return;
-        //    }
-        //    else if (menuName == "STABILIZER")
-        //    {
-        //        var label = new Label
-        //        {
-        //            Text = "Content for STABILIZER",
-        //            Dock = DockStyle.Fill,
-        //            TextAlign = System.Drawing.ContentAlignment.MiddleCenter
-        //        };
-        //        tabPage.Controls.Add(label);
-        //    }
-
-        //    tabControl.TabPages.Add(tabPage);
-        //    tabControl.SelectedTab = tabPage; // Focus the new tab
-        //}
 
         private void clearTabsAndContents()
         {

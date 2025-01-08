@@ -133,6 +133,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Contoller\Form1.ForecastController.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Exception\Class1.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
@@ -147,6 +150,7 @@
       <DependentUpon>LoginForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Helper\CellUpdateInfo.cs" />
+    <Compile Include="Helper\DataReaderExtensions.cs" />
     <Compile Include="Helper\SyncLinkedDictionary.cs" />
     <Compile Include="Model\UserDto.cs" />
     <Compile Include="Program.cs" />
@@ -163,12 +167,15 @@
     <Compile Include="Repository\SubTabRepository.cs" />
     <Compile Include="Repository\TabRepository.cs" />
     <Compile Include="Repository\UserRepository.cs" />
+    <Compile Include="Service\ForecastService.cs" />
+    <Compile Include="Service\Impl\ForecastServiceImpl.cs" />
     <Compile Include="Service\Impl\OperationsPlanningServiceImpl.cs" />
     <Compile Include="Service\OperationsPlanningService.cs" />
     <Compile Include="Service\UserSession.cs" />
     <Compile Include="Service\Impl\UserServiceImpl.cs" />
     <Compile Include="Service\UserService.cs" />
     <Compile Include="Helper\Optional.cs" />
+    <Compile Include="Util\Calculation.cs" />
     <Compile Include="Util\DateUtil.cs" />
     <Compile Include="Util\Validator.cs" />
     <Compile Include="Util\DataGridHelper.cs" />
