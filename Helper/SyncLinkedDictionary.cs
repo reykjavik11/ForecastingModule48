@@ -19,7 +19,7 @@ namespace ForecastingModule.Helper
                     _keys.Add(key); // Maintain insertion order
                 }
                 else
-                {
+                {//FIXME here - looks like if key already exist - value is not updated
                     Update(key, value, value);
                 }
             }
@@ -58,6 +58,13 @@ namespace ForecastingModule.Helper
             TValue value;
             _dictionary.TryGetValue(key, out value);
             return value;
+        }
+
+        public TValue GetOrDefault(TKey key, TValue defaultValue)
+        {
+            TValue value;
+            _dictionary.TryGetValue(key, out value);
+            return value != null? value : defaultValue;
         }
 
         public IEnumerable<TKey> Keys

@@ -21,7 +21,7 @@ namespace ForecastingModule
         private TabControl tabControl;
         private ToolStripStatusLabel statusLabel;
         private StatusStrip statusStrip;
-        private Panel butomButtonPanel;
+        private Panel buttomButtonPanel;
 
         public readonly Font TEXT_FONT = new Font("Arial", 9, FontStyle.Bold);
 
@@ -46,7 +46,7 @@ namespace ForecastingModule
         private bool isModelUpdated = false;
         private readonly static string OPERATION_DATE_FORMAT = "MMM-yy";
         private readonly static string FORECAST_DATE_FORMAT = "MM/dd/yy";
-
+        private Color STATUS_LABEL_COLOR = Color.DarkBlue;
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -253,7 +253,7 @@ namespace ForecastingModule
                 Text = "",
                 Spring = true, // Ensures it takes up available space
                 TextAlign = ContentAlignment.MiddleRight, // Align to bottom-right
-                ForeColor = Color.DarkBlue,
+                ForeColor = STATUS_LABEL_COLOR,
             };
 
             statusStrip.Items.Add(statusLabel);
@@ -307,7 +307,7 @@ namespace ForecastingModule
             if (this.statusLabel != null)
             {
                 this.statusLabel.Text = string.Empty;
-                this.statusLabel.ForeColor = Color.DarkBlue;
+                this.statusLabel.ForeColor = STATUS_LABEL_COLOR;
             }
             selectedSubTab = string.Empty;
             selectedTabModel = null;
@@ -328,16 +328,18 @@ namespace ForecastingModule
                 await populateSubTabs();
 
                 //add panal with Operation Planning buttons (if accessible)
-                butomButtonPanel = createOperattionButtonsPanel();
-                splitContainer.Panel2.Controls.Add(butomButtonPanel);
+                buttomButtonPanel = createOperattionButtonsPanel();
+                splitContainer.Panel2.Controls.Add(buttomButtonPanel);
             }
             else if (menuName == "MANAGE")
             {
                 populateManageTab(menuName);
             }
             else
-            {
+            {//Forecast
                 await populateSubTabs(menuName);
+                buttomButtonPanel = createForecastButtonsPanel();
+                splitContainer.Panel2.Controls.Add(buttomButtonPanel);
             }
             statusStrip = createStatusStrip();
             splitContainer.Panel2.Controls.Add(statusStrip);
@@ -518,21 +520,6 @@ namespace ForecastingModule
                     column.DefaultCellStyle.Alignment = DataGridViewContentAlignment.MiddleCenter;
                 }
             }
-
-            //Center align cells in all rows except the last row
-            //foreach (DataGridViewRow row in dataGridView.Rows)
-            //{
-            //    if (row.Index != dataGridView.Rows.Count - 1) // Exclude the last row
-            //    {
-            //        foreach (DataGridViewCell cell in row.Cells)
-            //        {
-            //            if (cell.ColumnIndex != 0) // Exclude the first column
-            //            {
-            //                cell.Style.Alignment = DataGridViewContentAlignment.MiddleCenter;
-            //            }
-            //        }
-            //    }
-            //}
         }
 
         private void OnDataGridView_PreventOperationCellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
@@ -596,10 +583,10 @@ namespace ForecastingModule
 
                 int total = Calculation.getSumBySalesCode(saleCode, selectedTabModel);
 
-                saleCodeContent.Add(Calculation.TOTAL, int.Parse(newValue));
+                object previousValue = saleCodeContent.Get(Calculation.TOTAL);
+                saleCodeContent.Update(Calculation.TOTAL, total, previousValue);
 
-                dataGridView[columnIndex, dataGridView.RowCount - 1].Value = total;
-                isModelUpdated = true;
+                dataGridView[columnIndex, dataGridView.RowCount - 1].Value = total;//update the grid
             }
         }
 
@@ -619,6 +606,7 @@ namespace ForecastingModule
 
                     // Clear the tag
                     dataGridView.Tag = null;
+                    isModelUpdated = true;
                 }
             }
         }
@@ -633,10 +621,10 @@ namespace ForecastingModule
             tabControl.Selected -= OnSelectedOperationPlaningModelTab;
             tabControl.Selecting -= OnChangeTheTab;
 
-            if (butomButtonPanel != null)
+            if (buttomButtonPanel != null)
             {
-                splitContainer.Panel2.Controls.Remove(butomButtonPanel);
-                butomButtonPanel.Dispose();
+                splitContainer.Panel2.Controls.Remove(buttomButtonPanel);
+                buttomButtonPanel.Dispose();
             }
             if (statusStrip != null)
             {
