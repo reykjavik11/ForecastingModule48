@@ -13,7 +13,5 @@ namespace ForecastingModule.Repository
         Dictionary<string, object> getOperationsSetting(string equipmentName);
 
         SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> retrieveExistedOperationsPlanning(string equipmentName);
-
-        int saveOperationsPlanning(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data);
     }
 }

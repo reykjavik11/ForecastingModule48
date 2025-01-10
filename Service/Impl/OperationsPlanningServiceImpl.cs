@@ -43,7 +43,7 @@ namespace ForecastingModule.Service.Impl
         {
             try
             {
-                return repositoryImpl.saveOperationsPlanning(data);
+                return repositoryImpl.save(data);
             }
             catch (Exception ex)
             {

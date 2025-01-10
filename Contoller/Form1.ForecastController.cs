@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ForecastingModule.Helper;
@@ -86,7 +85,7 @@ namespace ForecastingModule
             {
                 return;
             }
-
+            
             dataGridView.Rows.Clear();
 
             List<string> plannigDates = new List<string> { "", "", "" };
@@ -102,7 +101,8 @@ namespace ForecastingModule
             dataGridView.Rows.Add(secondRow.ToArray());
 
             List<string> saleCodes = this.selectedTabModel.Keys.ToList();
-            List<Tuple<int, int>> diffrenceForecastWithOPCellCoordinates = populateBodyForecasting(forecastDates, dataGridView, saleCodes);
+            List<Tuple<int, int>> diffrenceForecastWithOPCellCoordinates = 
+                populateBodyForecasting(forecastDates, dataGridView, saleCodes, refreshFromOperationPlannig);
 
             colorToRedNotMatchedCells(diffrenceForecastWithOPCellCoordinates, dataGridView);
             colorAllNotCorrectTotals(dataGridView);
@@ -146,7 +146,7 @@ namespace ForecastingModule
             int rowIndex = dataGridView.Rows.Count;//headers (2) rows have already added, so start from 3
 
             List<Tuple<int, int>> higlightRowColumnList = new List<Tuple<int, int>>();
-            SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>>  forecastModel= operationService.retrieveExistedOperationsPlanning(selectedTab);
+            SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>>  operationModel= operationService.retrieveExistedOperationsPlanning(selectedTab);
 
             foreach (var saleCode in saleCodes)
             {
@@ -169,7 +169,7 @@ namespace ForecastingModule
 
                         bool baseFlag = objectflag is bool ? (bool)objectflag: false;
 
-                        SyncLinkedDictionary<object, object> operationParams = forecastModel.Get(saleCode);
+                        SyncLinkedDictionary<object, object> operationParams = operationModel.Get(saleCode);
 
                         if (!refreshFromOperationPlannig && baseFlag)//compare base Opeeration Planning value with Forecast value- add higlight cell coordinates
                         {
@@ -193,8 +193,16 @@ namespace ForecastingModule
                                 if (!count.Equals(operationCount))//change count from Operation planning if there are not equal
                                 {
                                     row.Add(operationCount != null ? operationCount : 0);
-                                    saleParams.Update(forecastDate, operationCount, count);//Update forecast model from Operation planning value
-                                    
+
+                                    object forecastObject = saleParams.Get(forecastDate);
+                                    if (forecastObject != null)
+                                    {
+                                        saleParams.Update(forecastDate, operationCount, count);//Update forecast model from Operation planning value
+                                    } else
+                                    {
+                                        saleParams.Add(forecastDate, operationCount);//Update forecast model from Operation planning value
+                                    }
+
                                     log.LogInfo($"{selectedTab} - {selectedSubTab}. Refresh cell: row: {rowIndex}, coulumn: {columnIndex}. OperPlanning date: {operationDate} Base sale code: {saleCode}. Forecast value: {count} will change to Operation planning value: {operationCount} ");
                                     
                                     this.isModelUpdated = true;//set model true in case model been changed and user will be switch to diff tab 
@@ -222,7 +230,7 @@ namespace ForecastingModule
                     ++rowIndex;
                 }
             }
-            forecastModel = null;
+            operationModel = null;
 
             return higlightRowColumnList;
         }
@@ -502,14 +510,70 @@ namespace ForecastingModule
             return operationButtonsPanel;
         }
 
-        private void OnSaveForecastButtons_ClickAsync(object sender, EventArgs e)
+        private async void OnSaveForecastButtons_ClickAsync(object sender, EventArgs e)
         {
-            MessageBox.Show("Forecast Saving has not implemented yet.");
+            await Task.Run(() =>
+            {
+                try
+                {
+                    this.log.LogInfo($"Saving Foforecast data from {selectedTab} -> {selectedSubTab}");
+                    int insertedRows = forecastService.save(selectedTabModel);
+                    Invoke((Action)(() =>
+                    {
+                        clearStatusLabel();
+                        //this.log.LogInfo($"Foforecast data from {selectedTab} -> {selectedSubTab} has been saved successfully. Inserted {insertedRows} rows.");
+                        this.statusLabel.Text = $"Foforecast data from {selectedTab} -> {selectedSubTab} has been saved successfully.";
+                        this.isModelUpdated = false;
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        this.log.LogError($"Error saving Foforecast data: {selectedTab} -> {selectedSubTab}: " + ex.Message);
+                        MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        this.statusLabel.Text = $"Error saving Foforecast data: {selectedTab} -> {selectedSubTab}.";
+                        this.statusLabel.ForeColor = Color.Red;
+                        return;
+                    }));
+                }
+            });
         }
 
-        private void OnForecastRefreshButtons_Click(object sender, EventArgs e)
+        private async void OnForecastRefreshButtons_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Forecast Refreshing has not implemented yet.");
+            bool canNotProcess = !(forcastDateTimes.Count > 0 || forecastDataGridView != null);
+            if (canNotProcess)
+            {
+                log.LogError($"OnForecastRefreshButtons_Click -> forcastDateTimes {forcastDateTimes.Count} OR forecastDataGridView is null.");
+                return;
+            }
+            await Task.Run(() =>
+            {
+                try
+                {
+                    this.log.LogInfo($"Start refreshing process: {selectedTab} -> View {selectedSubTab}");
+                    Invoke((Action)(() =>
+                    {
+                        clearStatusLabel();
+                        populateForecastGrid(forcastDateTimes, forecastDataGridView, true);
+
+                        this.statusLabel.Text = "Data has been refreshing. Hit the 'Save' button for persist the changes.";
+                        this.log.LogInfo($"Refreshing process has been end: {selectedTab} -> View {selectedSubTab}");
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        this.log.LogError($"Error Refreshing Forecast data: {selectedTab} -> {selectedSubTab}: " + ex.Message);
+                        MessageBox.Show($"{ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        this.statusLabel.Text = $"Error Refreshing Forecast data: {selectedTab} -> {selectedSubTab}.";
+                        this.statusLabel.ForeColor = Color.Red;
+                        return;
+                    }));
+                }
+            });
         }
 
         private static void adjsutForecastGridToCenter(DataGridView dataGridView)
@@ -544,7 +608,6 @@ namespace ForecastingModule
                         }
 
                         tabControl.Selected += OnSelectedOperationPlaningModelTab;
-
                         tabControl.Selecting += OnChangeTheTab;
 
                         var firstSubTab = tabList.Count > 0 ? tabList[0] : null;
@@ -555,7 +618,6 @@ namespace ForecastingModule
                             TabControlEventArgs args = new TabControlEventArgs(firstSubTab, 0, TabControlAction.Selected);
                             OnSelectedOperationPlaningModelTab(tabControl, args);
                         }
-
                     }));
                 }
                 catch (Exception ex)

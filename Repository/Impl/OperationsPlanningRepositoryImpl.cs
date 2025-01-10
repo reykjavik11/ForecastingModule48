@@ -9,7 +9,7 @@ using ForecastingModule.Utilities;
 
 namespace ForecastingModule.Repository.Impl
 {
-    internal class OperationsPlanningRepositoryImpl : OperationsPlanningRepository
+    internal class OperationsPlanningRepositoryImpl : OperationsPlanningRepository, ISqlBaseOperations/*, ISqlAddiotionalOperations*/
     {
         public const string SC_MODEL = "SC_Model";
         private readonly string connectionString = (string)ConfigFileManager.Instance.Read(ConfigFileManager.KEY_HOST);
@@ -107,12 +107,12 @@ namespace ForecastingModule.Repository.Impl
             return result;
         }
 
-        public int saveOperationsPlanning(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data)
+        public int save(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data)
         {
             int insertedRows = 0;
             if (data == null)
             {
-                log.LogWarning($"OperationsPlanningRepositoryImpl -> saveOperationsPlanning: Operation model is null");
+                log.LogWarning($"OperationsPlanningRepositoryImpl -> save: Operation model is null");
                 return insertedRows;
             }
             using (SqlConnection connection = new SqlConnection(connectionString))
@@ -121,13 +121,13 @@ namespace ForecastingModule.Repository.Impl
                 SqlTransaction transaction = connection.BeginTransaction();
 
                 List<string> salesCodesKeys = data.Keys.ToList();
-                HashSet<string> opModelSet = getModelSet(data, salesCodesKeys);
+                HashSet<string> opModelSet = SqlHelper.getModelSet(data, salesCodesKeys);
 
                 List<string> opModelList = new List<string>(opModelSet);
                 try
                 {
                     // Delete Command
-                    StringBuilder deleteQuery = generateDeleteQuery(opModelList);
+                    StringBuilder deleteQuery = SqlHelper.generateDeleteQuery(opModelList, "OperationsPlanning", "OP_Model");
 
                     int deletedRows = 0;
                     using (SqlCommand deleteCommand = new SqlCommand(deleteQuery.ToString(), connection, transaction))
@@ -162,7 +162,7 @@ namespace ForecastingModule.Repository.Impl
             return insertedRows;
         }
 
-        private static void insertCommands(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys, SqlCommand insertCommand)
+        protected void insertCommands(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys, SqlCommand insertCommand)
         {
             int index = 0;
             foreach (string saleCode in salesCodesKeys)
@@ -193,7 +193,7 @@ namespace ForecastingModule.Repository.Impl
             }
         }
 
-        private static string generateInsertQueries(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys)
+        protected string generateInsertQueries(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys)
         {
             string insertQueries = "INSERT INTO [dbo].[OperationsPlanning] (OP_RecordID, OP_Base, OP_Date, OP_ForecastDate, OP_Quantity, OP_Model) VALUES ";
             List<string> parameters = new List<string>();
@@ -216,41 +216,6 @@ namespace ForecastingModule.Repository.Impl
             }
             insertQueries += string.Join(", ", parameters);
             return insertQueries;
-        }
-
-        private static HashSet<string> getModelSet(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys)
-        {
-            HashSet<String> opModelSet = new HashSet<string>();
-
-            foreach (string saleCode in salesCodesKeys)
-            {
-                SyncLinkedDictionary<object, object> valuesDictionaryBySaleCode = data.Get(saleCode);
-                if (valuesDictionaryBySaleCode != null)
-                {
-                    string scModel = (string)valuesDictionaryBySaleCode.Get(SC_MODEL);
-                    if (scModel != null)
-                    {
-                        opModelSet.Add(scModel);
-                    }
-                }
-            }
-
-            return opModelSet;
-        }
-
-        private static StringBuilder generateDeleteQuery(List<string> opModelList)
-        {
-            StringBuilder deleteQuery = new StringBuilder($"DELETE FROM [dbo].[OperationsPlanning] WHERE [OP_Model] in (");
-            for (int i = 0; i < opModelList.Count; i++)
-            {
-                deleteQuery.Append($"@DeleteId{i}");
-                if (i < opModelList.Count - 1)
-                {
-                    deleteQuery.Append(", ");
-                }
-            }
-            deleteQuery.Append(")");
-            return deleteQuery;
         }
     }
 }

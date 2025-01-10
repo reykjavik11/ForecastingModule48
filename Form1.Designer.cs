@@ -313,6 +313,14 @@ namespace ForecastingModule
             selectedTabModel = null;
             isModelUpdated = false;
         }
+        private void clearStatusLabel()
+        {
+            if (this.statusLabel != null)
+            {
+                this.statusLabel.Text = string.Empty;
+                this.statusLabel.ForeColor = STATUS_LABEL_COLOR;
+            }
+        }
 
         private async void AddTab(string menuName)
         {
