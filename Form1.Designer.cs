@@ -331,6 +331,7 @@ namespace ForecastingModule
 
             setSelectedTabToWindowTextBar();
 
+            statusStrip = createStatusStrip();
             if (menuName == ITEM_OPERATION_PLANNING)
             {
                 await populateSubTabs();
@@ -349,7 +350,6 @@ namespace ForecastingModule
                 buttomButtonPanel = createForecastButtonsPanel();
                 splitContainer.Panel2.Controls.Add(buttomButtonPanel);
             }
-            statusStrip = createStatusStrip();
             splitContainer.Panel2.Controls.Add(statusStrip);
         }
 
@@ -371,7 +371,7 @@ namespace ForecastingModule
             var tabPage = new TabPage(menuName);
             var label = new Label
             {
-                Text = "Content for MANAGE",
+                Text = "MANAGE has not implemented yet.",
                 Dock = DockStyle.Fill,
                 TextAlign = System.Drawing.ContentAlignment.MiddleCenter
             };
@@ -446,7 +446,7 @@ namespace ForecastingModule
                 {
                     dataGridView.ReadOnly = true;
 
-                    string message = $"{ITEM_OPERATION_PLANNING} DataGridView is read only.";
+                    string message = $"{ITEM_OPERATION_PLANNING} data is read only.";
                     log.LogInfo(message);
                     statusLabel.Text = message;
                 }
@@ -463,7 +463,7 @@ namespace ForecastingModule
             else if (ITEM_MANANGE != selectedSubTabName)
             {
                 this.selectedSubTab = selectedSubTabName;
-                log.LogInfo($"Generating Forecast DataGridView for '{selectedSubTabName}' moodel");
+                log.LogInfo($"Generating Forecast DataGridView for '{selectedSubTabName}' model");
                 generateForecastDataGrid(selectedTab, selectedTabName, selectedSubTabName);
             }
             else if (ITEM_MANANGE == selectedSubTabName)

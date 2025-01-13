@@ -56,12 +56,12 @@ namespace ForecastingModule
 
                 selectedTab.Controls.Add(forecastDataGridView);
 
-                bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessOperationsPlanning;
+                bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessForecast;
                 if (readOnlyMode)
                 {
                     forecastDataGridView.ReadOnly = true;
 
-                    string message = $"{selectedSubTabName} DataGridView is read only.";
+                    string message = $"{selectedSubTabName} data is read only.";
                     log.LogInfo(message);
                     statusLabel.Text = message;
                 }
@@ -347,7 +347,6 @@ namespace ForecastingModule
                                     //actualPercent = ((float)actualTotalValue / (float)expectedTotal) * base100Percentage;
                                     actualPercent = ((float)actualTotalValue / (float)expectedTotal) * selectedPercentage;
                                 }
-                                //string warnMessage = $"Warning: Row {rowIndex + 1} - Actual TOTAL: {actualTotalValue} ({actualPercent.ToString("0.00")}%) <> Expected TOTAL: {expectedTotal} ({base100Percentage}%)";
                                 string warnMessage = $"Warning: Row {rowIndex + 1} - Actual TOTAL: {actualTotalValue} ({actualPercent.ToString("0.00")}%) <> Expected TOTAL: {expectedTotal} ({selectedPercentage}%)";
                                 dataGridView.Rows[rowIndex].Cells[dataGridView.ColumnCount - 1].Style.ForeColor = Color.Red;
                                 if (showInStatus)
@@ -558,7 +557,7 @@ namespace ForecastingModule
                         clearStatusLabel();
                         populateForecastGrid(forcastDateTimes, forecastDataGridView, true);
 
-                        this.statusLabel.Text = "Data has been refreshing. Hit the 'Save' button for persist the changes.";
+                        this.statusLabel.Text = "Data has been refreshed. Hit the 'Save' button for persist the changes.";
                         this.log.LogInfo($"Refreshing process has been end: {selectedTab} -> View {selectedSubTab}");
                     }));
                 }
