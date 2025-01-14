@@ -3,6 +3,7 @@ using System.Data.SqlClient;
 using ForecastingModule.Model;
 using ForecastingModule.Helper;
 using ForecastingModule.Utilities;
+using ForecastingModule.exception;
 
 namespace ForecastingModule.Repository.Impl
 {
@@ -53,7 +54,7 @@ namespace ForecastingModule.Repository.Impl
             catch (Exception ex)
             {
                 log.LogError(ex.StackTrace);
-                throw ex;
+                throw new DBException(ex.Message);
             }
 
             Optional<UserDto> optionalUser = Optional<UserDto>.Empty();

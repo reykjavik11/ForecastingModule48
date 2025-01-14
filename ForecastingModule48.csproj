@@ -136,7 +136,7 @@
     <Compile Include="Contoller\Form1.ForecastController.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Exception\Class1.cs" />
+    <Compile Include="Exception\DBException.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
