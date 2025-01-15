@@ -53,6 +53,7 @@ namespace ForecastingModule
 
                 forecastDataGridView.CellValidating += OnDataGridView_ForecastValidating;
                 forecastDataGridView.CellEndEdit += OnDataGridView_CellForecastEndEdit;
+                forecastDataGridView.CellBeginEdit += OnDataGridView_CellBeginEdit;
 
                 selectedTab.Controls.Add(forecastDataGridView);
 
@@ -85,7 +86,7 @@ namespace ForecastingModule
             {
                 return;
             }
-            
+
             dataGridView.Rows.Clear();
 
             List<string> plannigDates = new List<string> { "", "", "" };
@@ -101,7 +102,7 @@ namespace ForecastingModule
             dataGridView.Rows.Add(secondRow.ToArray());
 
             List<string> saleCodes = this.selectedTabModel.Keys.ToList();
-            List<Tuple<int, int>> diffrenceForecastWithOPCellCoordinates = 
+            List<Tuple<int, int>> diffrenceForecastWithOPCellCoordinates =
                 populateBodyForecasting(forecastDates, dataGridView, saleCodes, refreshFromOperationPlannig);
 
             colorToRedNotMatchedCells(diffrenceForecastWithOPCellCoordinates, dataGridView);
@@ -146,7 +147,7 @@ namespace ForecastingModule
             int rowIndex = dataGridView.Rows.Count;//headers (2) rows have already added, so start from 3
 
             List<Tuple<int, int>> higlightRowColumnList = new List<Tuple<int, int>>();
-            SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>>  operationModel= operationService.retrieveExistedOperationsPlanning(selectedTab);
+            SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel = operationService.retrieveExistedOperationsPlanning(selectedTab);
 
             foreach (var saleCode in saleCodes)
             {
@@ -167,24 +168,25 @@ namespace ForecastingModule
                         DateTime forecastDate = DateUtil.toForecastDay(operationDate);
                         object count = saleParams.GetOrDefault(forecastDate, 0);
 
-                        bool baseFlag = objectflag is bool ? (bool)objectflag: false;
+                        bool baseFlag = objectflag is bool ? (bool)objectflag : false;
 
                         SyncLinkedDictionary<object, object> operationParams = operationModel.Get(saleCode);
 
                         if (!refreshFromOperationPlannig && baseFlag)//compare base Opeeration Planning value with Forecast value- add higlight cell coordinates
                         {
-                            
-                            if(operationParams != null)
+
+                            if (operationParams != null)
                             {
                                 object operationCount = operationParams.GetOrDefault(operationDate, 0);
-                                if(!count.Equals(operationCount))
+                                if (!count.Equals(operationCount))
                                 {
                                     log.LogInfo($"{selectedTab} - {selectedSubTab}. OperPlanning date: {operationDate} Base sale code: {saleCode} with Forecast [row: {rowIndex}, coulumn: {columnIndex}] value: {count} <> Operation planning {operationCount}");
                                     higlightRowColumnList.Add(Tuple.Create(rowIndex, columnIndex));
                                 }
                             }
                             row.Add(count != null ? count : 0);//added cell position and add forecast count anyway
-                        } else if (refreshFromOperationPlannig && baseFlag)
+                        }
+                        else if (refreshFromOperationPlannig && baseFlag)
                         {
                             //update the model
                             if (operationParams != null)
@@ -198,15 +200,17 @@ namespace ForecastingModule
                                     if (forecastObject != null)
                                     {
                                         saleParams.Update(forecastDate, operationCount, count);//Update forecast model from Operation planning value
-                                    } else
+                                    }
+                                    else
                                     {
                                         saleParams.Add(forecastDate, operationCount);//Update forecast model from Operation planning value
                                     }
 
                                     log.LogInfo($"{selectedTab} - {selectedSubTab}. Refresh cell: row: {rowIndex}, coulumn: {columnIndex}. OperPlanning date: {operationDate} Base sale code: {saleCode}. Forecast value: {count} will change to Operation planning value: {operationCount} ");
-                                    
+
                                     this.isModelUpdated = true;//set model true in case model been changed and user will be switch to diff tab 
-                                } else
+                                }
+                                else
                                 {
                                     row.Add(count != null ? count : 0);
                                 }
@@ -279,10 +283,10 @@ namespace ForecastingModule
                 // Check if there's a pending update from validation
                 var updateInfo = dataGridView.Tag as CellUpdateInfo;
 
-                clearAfterCellEdited(updateInfo.RowIndex, dataGridView);
 
                 if (updateInfo != null && updateInfo.RowIndex == e.RowIndex && updateInfo.ColumnIndex == e.ColumnIndex)
                 {
+                    clearAfterCellEdited(updateInfo.RowIndex, dataGridView);
                     // Update the cell value
                     dataGridView.Rows[updateInfo.RowIndex].Cells[updateInfo.ColumnIndex].Value = updateInfo.NewValue;
 
@@ -313,7 +317,7 @@ namespace ForecastingModule
             }
 
             int base100Percentage = baseTuple.Item1;
-            float base100Total = baseTuple.Item2; 
+            float base100Total = baseTuple.Item2;
 
             if (base100Percentage > 0)//TODO Does forecasting percentage potentialy can be greater that 100%?
             {
@@ -382,13 +386,26 @@ namespace ForecastingModule
                             && baseTempTotal != null && baseTempTotal is int baseTotal)
                         {
                             base100Percentage = basePercentage;
-                            base100Total = (float)baseTotal;
-                            break;
+                            if (((float)baseTotal) > base100Total)
+                            {
+                                base100Total = (float)baseTotal;
+                            }
                         }
                     }
                 }
             }
+            checkForZeroBasePercetage(base100Percentage);
             return Tuple.Create(base100Percentage, base100Total);
+        }
+
+        private void checkForZeroBasePercetage(int base100Percentage)
+        {
+            if (base100Percentage == 0)
+            {
+                string warning = $"Base sales code list, does not have any FC % - 100. [Selected tab {selectedTab}, subtab {selectedSubTab}]";
+                this.statusLabel.Text = warning;
+                log.LogWarning(warning);
+            }
         }
 
         private void updateForecastTotalCell(int columnIndex, int rowIndex, DataGridView dataGridView, string newValue)
@@ -444,7 +461,7 @@ namespace ForecastingModule
                     }
                     dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = cleanValue };
                 }
-                else if (dataRow)
+                else if (dataRow && cleanValue != previousEditedValue)
                 {
                     if (string.IsNullOrEmpty(newValue))
                     {
@@ -452,6 +469,7 @@ namespace ForecastingModule
                     }
                     dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue };
                 }
+                previousEditedValue = null;
             }
         }
 
@@ -463,7 +481,7 @@ namespace ForecastingModule
                 Height = 50,
             };
 
-            
+
             if (UserSession.GetInstance().User.accessForecast)
             {
                 Button refreshForecast = null;

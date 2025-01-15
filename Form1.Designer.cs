@@ -47,6 +47,8 @@ namespace ForecastingModule
         private readonly static string OPERATION_DATE_FORMAT = "MMM-yy";
         private readonly static string FORECAST_DATE_FORMAT = "MM/dd/yy";
         private Color STATUS_LABEL_COLOR = Color.DarkBlue;
+        private string previousEditedValue;
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -438,6 +440,7 @@ namespace ForecastingModule
 
                 dataGridView.CellValidating += OnDataGridView_DataGridValidating;
                 dataGridView.CellEndEdit += OnDataGridView_CellOperationEndEdit;
+                dataGridView.CellBeginEdit += OnDataGridView_CellBeginEdit;
 
                 selectedTab.Controls.Add(dataGridView);
 
@@ -544,6 +547,14 @@ namespace ForecastingModule
             }
         }
 
+        private void OnDataGridView_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        {
+            if (sender is DataGridView dataGridView && dataGridView.Rows[e.RowIndex].Cells[e.ColumnIndex].Value is int prevValue)
+            {
+                previousEditedValue = prevValue.ToString();
+            }
+        }
+
         private void OnDataGridView_DataGridValidating(object sender, DataGridViewCellValidatingEventArgs e)
         {
             if (sender is DataGridView dataGridView)
@@ -552,15 +563,16 @@ namespace ForecastingModule
 
                 string cleanValue = Validator.RemoveNonNumericCharacters(newValue);
 
-                bool dataRow = !(dataGridView.RowCount - 1 == e.RowIndex || e.RowIndex == 0); //last dataGridView.RowCount - 1 - TOTAL first row, or first empty row 
+                bool dataRow = !(dataGridView.RowCount - 1 == e.RowIndex || e.RowIndex == 0); //NOT last dataGridView.RowCount - 1 - TOTAL first row, or first empty row 
                 if (cleanValue != newValue)
                 {
                     dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = cleanValue }; 
                 }
-                else if (dataRow && !string.IsNullOrEmpty(newValue))
+                else if (dataRow && !string.IsNullOrEmpty(newValue) && cleanValue != previousEditedValue)
                 {
                     dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue };
                 }
+                previousEditedValue = null;
             }
         }
 
