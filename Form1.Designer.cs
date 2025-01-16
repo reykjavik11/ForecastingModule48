@@ -560,15 +560,14 @@ namespace ForecastingModule
             if (sender is DataGridView dataGridView)
             {
                 string newValue = e.FormattedValue?.ToString() ?? "";
-
                 string cleanValue = Validator.RemoveNonNumericCharacters(newValue);
 
                 bool dataRow = !(dataGridView.RowCount - 1 == e.RowIndex || e.RowIndex == 0); //NOT last dataGridView.RowCount - 1 - TOTAL first row, or first empty row 
                 if (cleanValue != newValue)
                 {
-                    dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = cleanValue }; 
+                    dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = cleanValue };
                 }
-                else if (dataRow && !string.IsNullOrEmpty(newValue) && cleanValue != previousEditedValue)
+                else if (dataRow && /*!string.IsNullOrEmpty(newValue) &&*/ cleanValue != previousEditedValue)
                 {
                     dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue };
                 }
@@ -578,10 +577,6 @@ namespace ForecastingModule
 
         private void updateOperationsTotalCell(int columnIndex, int rowIndex, DataGridView dataGridView, string newValue)
         {
-            if (string.IsNullOrEmpty(newValue))
-            {
-                return;
-            }
             string saleCode = (string)dataGridView[columnIndex, 0].Value;
 
             SyncLinkedDictionary<object, object> saleCodeContent = selectedTabModel.Get(saleCode);
@@ -592,13 +587,14 @@ namespace ForecastingModule
 
                 object oldVallue = saleCodeContent.Get(convertedDateTime);
 
+                int newParsedValue = string.IsNullOrEmpty(newValue) ? 0 : int.Parse(newValue);
                 if (oldVallue != null)
                 {
-                    saleCodeContent.Update(convertedDateTime, int.Parse(newValue), oldVallue);
+                    saleCodeContent.Update(convertedDateTime, newParsedValue, oldVallue);
                 }
                 else
                 {
-                    saleCodeContent.Add(convertedDateTime, int.Parse(newValue));
+                    saleCodeContent.Add(convertedDateTime, newParsedValue);
                 }
 
                 int total = Calculation.getSumBySalesCode(saleCode, selectedTabModel);
@@ -616,7 +612,7 @@ namespace ForecastingModule
             {
                 // Check if there's a pending update from validation
                 var updateInfo = dataGridView.Tag as CellUpdateInfo;
-                if (updateInfo != null && updateInfo.RowIndex == e.RowIndex && updateInfo.ColumnIndex == e.ColumnIndex)
+                if (updateInfo != null /*&& updateInfo.RowIndex == e.RowIndex && updateInfo.ColumnIndex == e.ColumnIndex*/)
                 {
                     // Update the cell value
                     dataGridView.Rows[updateInfo.RowIndex].Cells[updateInfo.ColumnIndex].Value = updateInfo.NewValue;
