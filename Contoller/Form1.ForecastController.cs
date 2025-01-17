@@ -31,11 +31,10 @@ namespace ForecastingModule
 
             selectedTab.Controls.Clear();
 
-            object objDays;
-            object objMonths;
-            if (operationSettings.TryGetValue("OPS_NbrDays", out objDays) && operationSettings.TryGetValue("OPS_NbrMonths", out objMonths))
+            populateForecastDates();
+
+            if(this.forcastDateTimes.Count() > 0)
             {
-                forcastDateTimes = DataGridHelper.GenerateDateList(DateTime.Now, (int)objDays, (int)objMonths, false);
                 int numCoLumns = forcastDateTimes.Count;
                 if (numCoLumns == 0)
                 {
@@ -78,6 +77,31 @@ namespace ForecastingModule
             {
                 log.LogError("Forecast Module: OperationSetting seted up not correctly.");
             }
+        }
+
+        private void populateForecastDates()
+        {
+            this.forcastDateTimes.Clear();
+            List<string> modelKeys = this.selectedTabModel.Keys.ToList();
+            foreach (var key in modelKeys)//collect only forecast dates
+            {
+                SyncLinkedDictionary<object, object> syncLinkedDictionary = this.selectedTabModel.Get(key);
+                if (syncLinkedDictionary != null)
+                {
+                    foreach (var paramKey in syncLinkedDictionary.Keys.ToList())
+                    {
+                        if (paramKey is DateTime forecastDate)
+                        {
+                            DateTime operPlanDate = DateUtil.toOperationPlanningDay(forecastDate);
+                            if (!this.forcastDateTimes.Contains(operPlanDate))
+                            {
+                                this.forcastDateTimes.Add(operPlanDate);
+                            }
+                        }
+                    }
+                }
+            }
+            this.forcastDateTimes.Sort();
         }
 
         private void populateForecastGrid(List<DateTime> forecastDates, DataGridView dataGridView, bool refreshFromOperationPlannig = false)
@@ -468,6 +492,9 @@ namespace ForecastingModule
                         newValue = "0";
                     }
                     dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue };
+                } else
+                {
+                    clearStatusLabel();
                 }
                 previousEditedValue = null;
             }
@@ -573,6 +600,9 @@ namespace ForecastingModule
                     Invoke((Action)(() =>
                     {
                         clearStatusLabel();
+
+                        selectedTabModel = forecastService.retrieveForecastData(this.selectedSubTab);//refresh model
+
                         populateForecastGrid(forcastDateTimes, forecastDataGridView, true);
 
                         this.statusLabel.Text = "Data has been refreshed. Hit the 'Save' button for persist the changes.";
