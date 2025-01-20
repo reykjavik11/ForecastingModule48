@@ -139,7 +139,7 @@ namespace ForecastingModule
             int startRow = findAfterTotalRowIndex(dataGridView, lastColumn);
             if (startRow > 0)
             {
-                Tuple<int, float> percentageBaseTuple = findBaseTotalAndPercentage();
+                Tuple<int, float> percentageBaseTuple = findBaseTotalAndPercentage(this.selectedTabModel);
                 for (int row = startRow; row < dataGridView.Rows.Count; ++row)
                 {
                     colorCellIfWrongTotal(dataGridView, row, percentageBaseTuple, false);
@@ -172,6 +172,7 @@ namespace ForecastingModule
 
             List<Tuple<int, int>> higlightRowColumnList = new List<Tuple<int, int>>();
             SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel = operationService.retrieveExistedOperationsPlanning(selectedTab);
+            
 
             foreach (var saleCode in saleCodes)
             {
@@ -181,16 +182,18 @@ namespace ForecastingModule
                     List<object> row = new List<object>(forecastDates.Count + 4);
 
                     object objectflag = saleParams.Get("SC_BaseFlag");
+                    object percentageObject = saleParams.Get("SC_FCPercent");
+                    int currentPercentage = percentageObject != null ? (int)percentageObject : 0;
 
                     row.Add(saleCode);
                     row.Add(saleParams.Get("SC_ItemName"));
-                    row.Add(saleParams.Get("SC_FCPercent"));
+                    row.Add(currentPercentage);
                     int columnIndex = row.Count;//starting after SC_FCPercent column (column with +1 because it won't add yet)
 
                     foreach (DateTime operationDate in forecastDates)
                     {
                         DateTime forecastDate = DateUtil.toForecastDay(operationDate);
-                        object count = saleParams.GetOrDefault(forecastDate, 0);
+                        object count = (int)saleParams.GetOrDefault(forecastDate, 0);
 
                         bool baseFlag = objectflag is bool ? (bool)objectflag : false;
 
@@ -210,12 +213,15 @@ namespace ForecastingModule
                             }
                             row.Add(count != null ? count : 0);//added cell position and add forecast count anyway
                         }
-                        else if (refreshFromOperationPlannig && baseFlag)
+                        else if (refreshFromOperationPlannig)
                         {
                             //update the model
-                            if (operationParams != null)
+                            if (operationParams != null  || saleParams != null)
                             {
-                                object operationCount = operationParams.GetOrDefault(operationDate, 0);
+                                object operationCount = operationParams != null ? operationParams.GetOrDefault(operationDate, 0) : saleParams.GetOrDefault(operationDate, 0);
+
+                                operationCount = refreshBase0Value(operationModel, currentPercentage, operationDate, baseFlag, operationCount);
+
                                 if (!count.Equals(operationCount))//change count from Operation planning if there are not equal
                                 {
                                     row.Add(operationCount != null ? operationCount : 0);
@@ -227,12 +233,12 @@ namespace ForecastingModule
                                     }
                                     else
                                     {
-                                        saleParams.Add(forecastDate, operationCount);//Update forecast model from Operation planning value
+                                        saleParams.Add(forecastDate, operationCount);//Add forecast model from Operation planning value
                                     }
 
                                     addTotalToRefreshedRow(saleCode, saleParams);
 
-                                    log.LogInfo($"{selectedTab} - {selectedSubTab}. Refresh cell: row: {rowIndex}, coulumn: {columnIndex}. OperPlanning date: {operationDate} Base sale code: {saleCode}. Forecast value: {count} will change to Operation planning value: {operationCount} ");
+                                    log.LogInfo($"{selectedTab} - {selectedSubTab} [baseFlag - {baseFlag}]. Refresh cell: row: {rowIndex}, coulumn: {columnIndex}. OperPlanning date: {operationDate} Base sale code: {saleCode}. Forecast value: {count} will change to Operation planning value: {operationCount} ");
 
                                     this.isModelUpdated = true;//set model true in case model been changed and user will be switch to diff tab 
 
@@ -264,6 +270,30 @@ namespace ForecastingModule
             operationModel = null;
 
             return higlightRowColumnList;
+        }
+
+        private object refreshBase0Value(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel, int currentPercentage, DateTime operationDate, bool baseFlag, object operationCount)
+        {
+            if (!baseFlag)//if base flag == false do round and update cells
+            {
+                Tuple<int, float> percentageBaseTuple = findBaseValueAndPercentage(operationModel, operationDate);
+
+                int base100Percentage = percentageBaseTuple.Item1;
+                float base100Total = percentageBaseTuple.Item2;
+
+                //int expectedTotal = 0;
+                double refreshedNotBasevalue = base100Total * ((float)currentPercentage / (float)base100Percentage);
+                if (refreshedNotBasevalue > 0.0 && refreshedNotBasevalue < 1.0)//looks like when value from percentage > 0 and < 1 - it expected total should be rounded to 1
+                {
+                    operationCount = 1;
+                }
+                else
+                {
+                    operationCount = (int)Math.Round(refreshedNotBasevalue, MidpointRounding.AwayFromZero);
+                }
+            }
+
+            return operationCount;
         }
 
         private void addTotalToRefreshedRow(string saleCode, SyncLinkedDictionary<object, object> saleParams)
@@ -364,14 +394,14 @@ namespace ForecastingModule
                         && editedBaseFlag != null && editedBaseFlag is bool editFlag && !editFlag)
                     {
                         int expectedTotal = 0;
-                        float value = base100Total * ((float)selectedPercentage / (float)base100Percentage);
+                        double value = base100Total * ((float)selectedPercentage / (float)base100Percentage);
                         if (value > 0.0 && value < 1.0)//looks like when value from percentage > 0 and < 1 - it expected total should be rounded to 1
                         {
                             expectedTotal = 1;
                         }
                         else
                         {
-                            expectedTotal = (int)value;
+                            expectedTotal = (int)Math.Round(value, MidpointRounding.AwayFromZero);
                         }
                         object actualTempTotal = saleParams.Get(Calculation.TOTAL);
                         if (actualTempTotal != null && actualTempTotal is int actualTotalValue)
@@ -399,15 +429,55 @@ namespace ForecastingModule
             }
         }
 
-        private Tuple<int, float> findBaseTotalAndPercentage()
+        private Tuple<int, float> findBaseValueAndPercentage(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> model, DateTime operationsDate)
         {
-            List<string> saleCodes = this.selectedTabModel.Keys.ToList();
+            List<string> saleCodes = model.Keys.ToList();
+
+            int base100Total = 0;
+            int base100Percentage = 0;
+            float base100Value = 0;
+            foreach (var code in saleCodes)
+            {
+                SyncLinkedDictionary<object, object> saleParams = model.Get(code);
+                if (saleParams != null)
+                {
+                    object baseFlag = saleParams.Get(ForecastRepositoryImpl.BASE_FLAG);
+                    
+                    if (baseFlag != null && baseFlag is bool flag && flag)
+                    {
+                        object objectValue = saleParams.Get(operationsDate);
+                        object baseTempPercentage = saleParams.Get("SC_FCPercent");
+                        object objectTotal = saleParams.Get(Calculation.TOTAL);
+
+                        if (baseTempPercentage != null && baseTempPercentage is int basePercentage && basePercentage >= 100
+                           && objectValue != null && objectValue is int baseCount
+                           && objectTotal != null && objectTotal is int baseTotal)
+                        {
+                            
+                            if (/*((float)baseCount) > base100Value && */baseTotal > base100Total)
+                            {
+                                base100Percentage = basePercentage;
+                                base100Value = (float)baseCount;
+
+                                base100Total = baseTotal;
+                            }
+                        }
+                    }
+                }
+            }
+            checkForZeroBasePercetage(base100Percentage);
+            return Tuple.Create(base100Percentage, base100Value);
+        }
+
+        private Tuple<int, float> findBaseTotalAndPercentage(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> model)
+        {
+            List<string> saleCodes = model.Keys.ToList();
 
             int base100Percentage = 0;
             float base100Total = 0;
             foreach (var code in saleCodes)
             {
-                SyncLinkedDictionary<object, object> saleParams = this.selectedTabModel.Get(code);
+                SyncLinkedDictionary<object, object> saleParams = model.Get(code);
                 if (saleParams != null)
                 {
                     object baseFlag = saleParams.Get(ForecastRepositoryImpl.BASE_FLAG);
@@ -418,9 +488,9 @@ namespace ForecastingModule
                         if (baseTempPercentage != null && baseTempPercentage is int basePercentage && basePercentage >= 100
                             && baseTempTotal != null && baseTempTotal is int baseTotal)
                         {
-                            base100Percentage = basePercentage;
                             if (((float)baseTotal) > base100Total)
                             {
+                                base100Percentage = basePercentage;
                                 base100Total = (float)baseTotal;
                             }
                         }
@@ -473,7 +543,7 @@ namespace ForecastingModule
 
                 dataGridView[dataGridView.ColumnCount - 1, rowIndex].Value = total;
 
-                Tuple<int, float> percentageBaseTuple = findBaseTotalAndPercentage();
+                Tuple<int, float> percentageBaseTuple = findBaseTotalAndPercentage(this.selectedTabModel);
                 colorCellIfWrongTotal(dataGridView, rowIndex, percentageBaseTuple);
             }
         }
