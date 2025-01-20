@@ -230,9 +230,12 @@ namespace ForecastingModule
                                         saleParams.Add(forecastDate, operationCount);//Update forecast model from Operation planning value
                                     }
 
+                                    addTotalToRefreshedRow(saleCode, saleParams);
+
                                     log.LogInfo($"{selectedTab} - {selectedSubTab}. Refresh cell: row: {rowIndex}, coulumn: {columnIndex}. OperPlanning date: {operationDate} Base sale code: {saleCode}. Forecast value: {count} will change to Operation planning value: {operationCount} ");
 
                                     this.isModelUpdated = true;//set model true in case model been changed and user will be switch to diff tab 
+
                                 }
                                 else
                                 {
@@ -263,6 +266,12 @@ namespace ForecastingModule
             return higlightRowColumnList;
         }
 
+        private void addTotalToRefreshedRow(string saleCode, SyncLinkedDictionary<object, object> saleParams)
+        {
+            object prevTotal = saleParams.Get(Calculation.TOTAL);
+            int newTotal = Calculation.getSumBySalesCode(saleCode, this.selectedTabModel);
+            saleParams.Update(Calculation.TOTAL, newTotal, prevTotal);
+        }
 
         private void colorToRedNotMatchedCells(List<Tuple<int, int>> diffrenceForecastWithOPCellCoordinates, DataGridView dataGridView)
         {
