@@ -160,6 +160,10 @@ namespace ForecastingModule.Repository.Impl
                     }
                 }
             }
+            if(index == 0)
+            {
+                throw new DataMisalignedException("No Data to save.");
+            }
         }
 
         protected string generateInsertQueries(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data, List<string> salesCodesKeys)

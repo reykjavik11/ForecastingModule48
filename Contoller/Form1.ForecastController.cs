@@ -33,7 +33,7 @@ namespace ForecastingModule
 
             populateForecastDates();
 
-            if(this.forcastDateTimes.Count() > 0)
+            if (this.forcastDateTimes.Count() > 0)
             {
                 int numCoLumns = forcastDateTimes.Count;
                 if (numCoLumns == 0)
@@ -172,7 +172,7 @@ namespace ForecastingModule
 
             List<Tuple<int, int>> higlightRowColumnList = new List<Tuple<int, int>>();
             SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel = operationService.retrieveExistedOperationsPlanning(selectedTab);
-            
+
 
             foreach (var saleCode in saleCodes)
             {
@@ -216,7 +216,7 @@ namespace ForecastingModule
                         else if (refreshFromOperationPlannig)
                         {
                             //update the model
-                            if (operationParams != null  || saleParams != null)
+                            if (operationParams != null || saleParams != null)
                             {
                                 object operationCount = operationParams != null ? operationParams.GetOrDefault(operationDate, 0) : saleParams.GetOrDefault(operationDate, 0);
 
@@ -281,16 +281,23 @@ namespace ForecastingModule
                 int base100Percentage = percentageBaseTuple.Item1;
                 float base100Total = percentageBaseTuple.Item2;
 
-                //int expectedTotal = 0;
-                double refreshedNotBasevalue = base100Total * ((float)currentPercentage / (float)base100Percentage);
-                if (refreshedNotBasevalue > 0.0 && refreshedNotBasevalue < 1.0)//looks like when value from percentage > 0 and < 1 - it expected total should be rounded to 1
+                double refreshedNotBasevalue = 0.0;
+                if (base100Percentage == 0)
                 {
-                    operationCount = 1;
+                    log.LogWarning($"Attemp to devide be zero. Model {selectedTab} - selected sub tab {selectedSubTab}. Base code percentage < 100, that's why base100Percentage is 0.");
                 }
                 else
                 {
-                    operationCount = (int)Math.Round(refreshedNotBasevalue, MidpointRounding.AwayFromZero);
+                    refreshedNotBasevalue = base100Total * ((float)currentPercentage / (float)base100Percentage);
                 }
+                //if (refreshedNotBasevalue > 0.0 && refreshedNotBasevalue < 1.0)//looks like when value from percentage > 0 and < 1 - it expected total should be rounded to 1
+                //{
+                //    operationCount = 1;
+                //}
+                //else
+                //{
+                    operationCount = (int)Math.Round(refreshedNotBasevalue, MidpointRounding.AwayFromZero);
+                //}
             }
 
             return operationCount;
@@ -395,14 +402,14 @@ namespace ForecastingModule
                     {
                         int expectedTotal = 0;
                         double value = base100Total * ((float)selectedPercentage / (float)base100Percentage);
-                        if (value > 0.0 && value < 1.0)//looks like when value from percentage > 0 and < 1 - it expected total should be rounded to 1
-                        {
-                            expectedTotal = 1;
-                        }
-                        else
-                        {
+                        //if (value > 0.0 && value < 1.0)//looks like when value from percentage > 0 and < 1 - it expected total should be rounded to 1
+                        //{
+                        //    expectedTotal = 1;
+                        //}
+                        //else
+                        //{
                             expectedTotal = (int)Math.Round(value, MidpointRounding.AwayFromZero);
-                        }
+                        //}
                         object actualTempTotal = saleParams.Get(Calculation.TOTAL);
                         if (actualTempTotal != null && actualTempTotal is int actualTotalValue)
                         {
@@ -442,18 +449,21 @@ namespace ForecastingModule
                 if (saleParams != null)
                 {
                     object baseFlag = saleParams.Get(ForecastRepositoryImpl.BASE_FLAG);
-                    
+
                     if (baseFlag != null && baseFlag is bool flag && flag)
                     {
                         object objectValue = saleParams.Get(operationsDate);
                         object baseTempPercentage = saleParams.Get("SC_FCPercent");
                         object objectTotal = saleParams.Get(Calculation.TOTAL);
 
+                        object scModel = saleParams.Get(OperationsPlanningRepositoryImpl.SC_MODEL);
+
                         if (baseTempPercentage != null && baseTempPercentage is int basePercentage && basePercentage >= 100
                            && objectValue != null && objectValue is int baseCount
-                           && objectTotal != null && objectTotal is int baseTotal)
+                           && objectTotal != null && objectTotal is int baseTotal
+                           && scModel != null && scModel.Equals(this.selectedSubTab))
                         {
-                            
+
                             if (/*((float)baseCount) > base100Value && */baseTotal > base100Total)
                             {
                                 base100Percentage = basePercentage;
@@ -505,7 +515,7 @@ namespace ForecastingModule
         {
             if (base100Percentage == 0)
             {
-                string warning = $"Base sales code list, does not have any FC % - 100. [Selected tab {selectedTab}, subtab {selectedSubTab}]";
+                string warning = $"Base sales code with model - {selectedSubTab}, does not have any TOTAL > 0. [Selected tab {selectedTab}]";
                 this.statusLabel.Text = warning;
                 log.LogWarning(warning);
             }
@@ -555,7 +565,7 @@ namespace ForecastingModule
 
                 string cleanValue = Validator.RemoveNonNumericCharacters(newValue);
 
-                bool dataRow = !(dataGridView.ColumnCount - 1 == e.ColumnIndex || (e.RowIndex >= 0 && e.RowIndex <= 2) || e.RowIndex == 0 || e.RowIndex == 1);
+                bool dataRow = !(dataGridView.ColumnCount - 1 == e.ColumnIndex || (e.RowIndex >= 0 && e.RowIndex <= 1) /*|| e.RowIndex == 0 || e.RowIndex == 1*/);
                 if (cleanValue != newValue)
                 {
                     if (string.IsNullOrEmpty(cleanValue))
@@ -571,7 +581,8 @@ namespace ForecastingModule
                         newValue = "0";
                     }
                     dataGridView.Tag = new CellUpdateInfo { RowIndex = e.RowIndex, ColumnIndex = e.ColumnIndex, NewValue = newValue };
-                } else
+                }
+                else
                 {
                     clearStatusLabel();
                 }
@@ -644,7 +655,6 @@ namespace ForecastingModule
                     Invoke((Action)(() =>
                     {
                         clearStatusLabel();
-                        //this.log.LogInfo($"Foforecast data from {selectedTab} -> {selectedSubTab} has been saved successfully. Inserted {insertedRows} rows.");
                         this.statusLabel.Text = $"Foforecast data from {selectedTab} -> {selectedSubTab} has been saved successfully.";
                         this.isModelUpdated = false;
                     }));
@@ -665,12 +675,11 @@ namespace ForecastingModule
 
         private async void OnForecastRefreshButtons_Click(object sender, EventArgs e)
         {
-            bool canNotProcess = !(forcastDateTimes.Count > 0 || forecastDataGridView != null);
-            if (canNotProcess)
+            if(!refreshClickValidation())
             {
-                log.LogError($"OnForecastRefreshButtons_Click -> forcastDateTimes {forcastDateTimes.Count} OR forecastDataGridView is null.");
                 return;
             }
+
             await Task.Run(() =>
             {
                 try
@@ -680,11 +689,11 @@ namespace ForecastingModule
                     {
                         clearStatusLabel();
 
-                        selectedTabModel = forecastService.retrieveForecastData(this.selectedSubTab);//refresh model
+                        this.selectedTabModel = forecastService.retrieveForecastData(this.selectedSubTab);//refresh model
 
                         populateForecastGrid(forcastDateTimes, forecastDataGridView, true);
 
-                        this.statusLabel.Text = "Data has been refreshed. Hit the 'Save' button for persist the changes.";
+                        printRefreshStatus();
                         this.log.LogInfo($"Refreshing process has been end: {selectedTab} -> View {selectedSubTab}");
                     }));
                 }
@@ -700,6 +709,50 @@ namespace ForecastingModule
                     }));
                 }
             });
+        }
+
+        private bool refreshClickValidation()
+        {
+            bool canNotProcess = !(forcastDateTimes.Count > 0 || forecastDataGridView != null);
+            if (canNotProcess)
+            {
+                log.LogError($"OnForecastRefreshButtons_Click -> forcastDateTimes {forcastDateTimes.Count} OR forecastDataGridView is null.");
+                return false;
+            }
+            return true;
+        }
+
+        private void printRefreshStatus()
+        {
+            if (validateRefreshData(this.selectedTabModel))
+            {
+                this.statusLabel.Text = "Data has been refreshed. Hit the 'Save' button for persist the changes.";
+            }
+            else
+            {
+                this.statusLabel.Text = "No Data to refresh.";
+            }
+        }
+
+        private static bool validateRefreshData(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> model)
+        {
+            List<string> keyList = model.Keys.ToList();
+
+            foreach (string key in keyList)
+            {
+                SyncLinkedDictionary<object, object> saleParams = model.Get(key);
+                if (saleParams != null)
+                {
+                    foreach (Object paramKey in saleParams.Keys.ToList())
+                    {
+                        if (paramKey is DateTime)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
         private static void adjsutForecastGridToCenter(DataGridView dataGridView)
