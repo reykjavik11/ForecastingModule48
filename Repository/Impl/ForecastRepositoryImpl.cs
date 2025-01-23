@@ -15,7 +15,6 @@ namespace ForecastingModule.Repository.Impl
         private readonly Logger log = Logger.Instance;
         public const string BASE_FLAG = "SC_BaseFlag";
 
-        private readonly DatabaseHelper db = DatabaseHelper.Instance;
         private static readonly Lazy<ForecastRepositoryImpl> _instance = new Lazy<ForecastRepositoryImpl>(() => new ForecastRepositoryImpl());
 
         public static ForecastRepositoryImpl Instance => _instance.Value;
@@ -61,7 +60,6 @@ namespace ForecastingModule.Repository.Impl
                                 if(nullableDateTime.HasValue)
                                 {
                                     int quantity = reader.GetInt32(reader.GetOrdinal("FC_Quantity"));
-                                    //syncLinkedDictionary.Add(dateKey, quantity);
                                     syncLinkedDictionary.Add(nullableDateTime.Value, quantity);
                                 } 
                                 

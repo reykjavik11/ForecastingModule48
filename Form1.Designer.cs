@@ -147,7 +147,7 @@ namespace ForecastingModule
             this.WindowState = FormWindowState.Maximized;
         }
 
-        private Panel createOperattionButtonsPanel()
+        private Panel createOperationButtonsPanel()
         {
             Panel operationButtonsPanel = new Panel
             {
@@ -339,7 +339,7 @@ namespace ForecastingModule
                 await populateSubTabs();
 
                 //add panal with Operation Planning buttons (if accessible)
-                buttomButtonPanel = createOperattionButtonsPanel();
+                buttomButtonPanel = createOperationButtonsPanel();
                 splitContainer.Panel2.Controls.Add(buttomButtonPanel);
             }
             else if (menuName == "MANAGE")
@@ -442,7 +442,7 @@ namespace ForecastingModule
                 dataGridView.CellEndEdit += OnDataGridView_CellOperationEndEdit;
                 dataGridView.CellBeginEdit += OnDataGridView_CellBeginEdit;
 
-                selectedTab.Controls.Add(dataGridView);
+                createAndPopulateComments(selectedTab, selectedSubTabName, dataGridView);
 
                 bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessOperationsPlanning;
                 if (readOnlyMode)
@@ -473,6 +473,50 @@ namespace ForecastingModule
             {
                 log.LogInfo($"Grid on Manage will be there.");
             }
+        }
+
+        private void createAndPopulateComments(TabPage selectedTab, string selectedSubTabName, DataGridView dataGridView)
+        {
+            Panel commentPanel = new Panel
+            {
+                Dock = DockStyle.Bottom,
+                AutoScroll = true
+            };
+            selectedTab.Controls.Add(dataGridView);
+            selectedTab.Controls.Add(commentPanel);
+
+            Label commentLabel = new Label
+            {
+                Dock = DockStyle.Top,
+                Text = "COMMENTS:",
+            };
+            commentPanel.Controls.Add(commentLabel);
+
+            var commentDataGrid = new DataGridView
+            {
+                Dock = DockStyle.Bottom,
+                ColumnCount = 1,
+                ColumnHeadersVisible = false,
+                RowHeadersVisible = false,
+                ReadOnly = true,
+            };
+            commentDataGrid.AllowUserToAddRows = false;
+
+            Dictionary<string, object> operationSettings = operationService.getOperationsSetting(selectedSubTabName);
+
+            object comment;
+            bool v = operationSettings.TryGetValue("OPS_Comments", out comment);
+            if (comment != null)
+            {
+                string strComment = comment as string;
+                commentDataGrid.Columns[0].Width = strComment.Length * 6;
+            }
+            commentDataGrid.Rows.Add(comment);
+
+
+            commentPanel.Controls.Add(commentDataGrid);
+
+            selectedTab.Controls.Add(commentPanel);
         }
 
         private void populateOperationPlanningGrid(string selectedSubTabName, List<string> headerSaleCodes, DataGridView dataGridView)
