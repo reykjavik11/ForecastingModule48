@@ -45,7 +45,7 @@ namespace ForecastingModule
                 forecastDataGridView = new DataGridView
                 {
                     Dock = DockStyle.Fill,
-                    ColumnCount = numCoLumns + 4,//plus sale code, Item Name, FC %...Total
+                    ColumnCount = numCoLumns + 5,//plus sale code, Item Name, FC %...Total, Comments
                     ColumnHeadersVisible = false,
                 };
                 forecastDataGridView.AllowUserToAddRows = false;
@@ -121,6 +121,7 @@ namespace ForecastingModule
                 secondRow.Add(DateUtil.toForecastDay(forecastDate).ToString(FORECAST_DATE_FORMAT));
             }
             secondRow.Add(Calculation.TOTAL);
+            secondRow.Add("COMMENTS");
 
             dataGridView.Rows.Add(plannigDates.ToArray());
             dataGridView.Rows.Add(secondRow.ToArray());
@@ -133,9 +134,10 @@ namespace ForecastingModule
             colorAllNotCorrectTotals(dataGridView);
         }
 
+
         private void colorAllNotCorrectTotals(DataGridView dataGridView)
         {
-            int lastColumn = dataGridView.ColumnCount - 1;
+            int lastColumn = dataGridView.ColumnCount - 2;
             int startRow = findAfterTotalRowIndex(dataGridView, lastColumn);
             if (startRow > 0)
             {
@@ -261,6 +263,8 @@ namespace ForecastingModule
                         ++columnIndex;
                     }
                     row.Add(saleParams.Get(Calculation.TOTAL));
+                    row.Add(saleParams.GetOrDefault("SC_Comments", string.Empty));
+
 
                     dataGridView.Rows.Add(row.ToArray());
 
@@ -324,9 +328,9 @@ namespace ForecastingModule
         {
             if (sender is DataGridView dataGrid)
             {
-                int lastRowIndex = dataGrid.RowCount - 1;
 
-                if ((e.ColumnIndex >= 0 && e.ColumnIndex <= 2) || e.RowIndex == 0 || e.RowIndex == 1 || e.ColumnIndex == dataGrid.ColumnCount - 1) //disable - 1..3 columns, 1-2 Rows, Last row (TOTAL) 
+                if ((e.ColumnIndex >= 0 && e.ColumnIndex <= 2) || e.RowIndex == 0 || e.RowIndex == 1 
+                    || e.ColumnIndex == dataGrid.ColumnCount - 1 || (dataGrid.ColumnCount > 1 && e.ColumnIndex == dataGrid.ColumnCount - 2)) //disable - 1..3 columns, 1-2 Rows, column (TOTAL), last column: COMMENTS
                 {
                     e.Cancel = true;
                 }
@@ -373,7 +377,7 @@ namespace ForecastingModule
 
         private void clearAfterCellEdited(int rowIndex, DataGridView dataGridView)
         {
-            dataGridView.Rows[rowIndex].Cells[dataGridView.ColumnCount - 1].Style.ForeColor = Color.Black;
+            dataGridView.Rows[rowIndex].Cells[dataGridView.ColumnCount - 2].Style.ForeColor = Color.Black;
             this.statusLabel.Text = string.Empty;
             this.statusLabel.ForeColor = STATUS_LABEL_COLOR;
         }
@@ -422,7 +426,7 @@ namespace ForecastingModule
                                     actualPercent = ((float)actualTotalValue / (float)expectedTotal) * selectedPercentage;
                                 }
                                 string warnMessage = $"Warning: Row {rowIndex + 1} - Actual TOTAL: {actualTotalValue} ({actualPercent.ToString("0.00")}%) <> Expected TOTAL: {expectedTotal} ({selectedPercentage}%)";
-                                dataGridView.Rows[rowIndex].Cells[dataGridView.ColumnCount - 1].Style.ForeColor = Color.Red;
+                                dataGridView.Rows[rowIndex].Cells[dataGridView.ColumnCount - 2].Style.ForeColor = Color.Red;
                                 if (showInStatus)
                                 {
                                     this.statusLabel.Text = warnMessage;
@@ -551,7 +555,7 @@ namespace ForecastingModule
                 object previousValue = saleCodeContent.Get(Calculation.TOTAL);
                 saleCodeContent.Update(Calculation.TOTAL, total, previousValue);//update the model
 
-                dataGridView[dataGridView.ColumnCount - 1, rowIndex].Value = total;
+                dataGridView[dataGridView.ColumnCount - 2, rowIndex].Value = total;
 
                 Tuple<int, float> percentageBaseTuple = findBaseTotalAndPercentage(this.selectedTabModel);
                 colorCellIfWrongTotal(dataGridView, rowIndex, percentageBaseTuple);

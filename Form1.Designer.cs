@@ -509,7 +509,7 @@ namespace ForecastingModule
             if (comment != null)
             {
                 string strComment = comment as string;
-                commentDataGrid.Columns[0].Width = strComment.Length * 6;
+                setCommentColumnLength(commentDataGrid, strComment.Length);
             }
             commentDataGrid.Rows.Add(comment);
 
@@ -517,6 +517,14 @@ namespace ForecastingModule
             commentPanel.Controls.Add(commentDataGrid);
 
             selectedTab.Controls.Add(commentPanel);
+        }
+
+        private static void setCommentColumnLength(DataGridView commentDataGrid, int commentLenght)
+        {
+            if (commentLenght > 0)
+            {
+                commentDataGrid.Columns[0].Width = commentLenght * 6;
+            }
         }
 
         private void populateOperationPlanningGrid(string selectedSubTabName, List<string> headerSaleCodes, DataGridView dataGridView)
