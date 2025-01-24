@@ -519,7 +519,7 @@ namespace ForecastingModule
         {
             if (base100Percentage == 0)
             {
-                string warning = $"Base sales code with model - {selectedSubTab}, does not have any TOTAL > 0. [Selected tab {selectedTab}]";
+                string warning = $"Base sales code with model - {selectedSubTab}, does not have any FC % = 100. [Selected tab {selectedTab}]";
                 this.statusLabel.Text = warning;
                 log.LogWarning(warning);
             }

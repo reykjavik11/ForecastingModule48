@@ -501,7 +501,15 @@ namespace ForecastingModule
                 ReadOnly = true,
             };
             commentDataGrid.AllowUserToAddRows = false;
+            commentPanel.Controls.Add(commentDataGrid);
+            selectedTab.Controls.Add(commentPanel);
 
+            populateCommentGrid(selectedSubTabName, commentDataGrid);
+            deselectFocusCommentDataGrid(commentDataGrid);
+        }
+
+        private void populateCommentGrid(string selectedSubTabName, DataGridView commentDataGrid)
+        {
             Dictionary<string, object> operationSettings = operationService.getOperationsSetting(selectedSubTabName);
 
             object comment;
@@ -510,13 +518,17 @@ namespace ForecastingModule
             {
                 string strComment = comment as string;
                 setCommentColumnLength(commentDataGrid, strComment.Length);
+                commentDataGrid.Rows.Add(comment);
             }
-            commentDataGrid.Rows.Add(comment);
+        }
 
-
-            commentPanel.Controls.Add(commentDataGrid);
-
-            selectedTab.Controls.Add(commentPanel);
+        private static void deselectFocusCommentDataGrid(DataGridView commentDataGrid)
+        {
+            if (commentDataGrid.RowCount > 0 && commentDataGrid.ColumnCount > 0)
+            {
+                commentDataGrid.CurrentCell = commentDataGrid[0, 0];
+                commentDataGrid.CurrentCell.Selected = false;
+            }
         }
 
         private static void setCommentColumnLength(DataGridView commentDataGrid, int commentLenght)
