@@ -25,13 +25,13 @@ namespace ForecastingModule.Helper
             }
         }
         
-        public void Update(TKey key, TValue value, TValue oldValue)
+        public bool Update(TKey key, TValue value, TValue oldValue)
         {
             lock (_lock)
             {
                 if (_keys.Contains(key))
                 {
-                    _dictionary.TryUpdate(key, value, oldValue);
+                    return _dictionary.TryUpdate(key, value, oldValue);
                 }
                 else
                 {

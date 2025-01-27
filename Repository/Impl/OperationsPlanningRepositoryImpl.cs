@@ -82,7 +82,7 @@ namespace ForecastingModule.Repository.Impl
                                     syncLinkedDictionary = new SyncLinkedDictionary<object, object>();
 
                                     //constant data here
-                                    syncLinkedDictionary.Add("SC_BaseFlag", true);
+                                    syncLinkedDictionary.Add(ForecastRepositoryImpl.BASE_FLAG, true);
                                     syncLinkedDictionary.Add("SC_FCPercent", reader.GetInt32(reader.GetOrdinal("SC_FCPercent")));
                                     syncLinkedDictionary.Add(SC_MODEL, reader.GetString(reader.GetOrdinal("SC_Model")));
                                     syncLinkedDictionary.Add("HIDEN_KEYS", new List<string> { "SC_Model" });

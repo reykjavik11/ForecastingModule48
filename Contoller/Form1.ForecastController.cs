@@ -243,7 +243,6 @@ namespace ForecastingModule
                                     log.LogInfo($"{selectedTab} - {selectedSubTab} [baseFlag - {baseFlag}]. Refresh cell: row: {rowIndex}, coulumn: {columnIndex}. OperPlanning date: {operationDate} Base sale code: {saleCode}. Forecast value: {count} will change to Operation planning value: {operationCount} ");
 
                                     this.isModelUpdated = true;//set model true in case model been changed and user will be switch to diff tab 
-
                                 }
                                 else
                                 {

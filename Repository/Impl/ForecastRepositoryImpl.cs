@@ -9,7 +9,7 @@ using ForecastingModule.Utilities;
 
 namespace ForecastingModule.Repository.Impl
 {
-    internal class ForecastRepositoryImpl : ForecastRepository, ISqlBaseOperations
+    public class ForecastRepositoryImpl : ForecastRepository, ISqlBaseOperations
     {
         private readonly string connectionString = (string)ConfigFileManager.Instance.Read(ConfigFileManager.KEY_HOST);
         private readonly Logger log = Logger.Instance;
