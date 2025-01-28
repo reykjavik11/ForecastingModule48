@@ -173,8 +173,10 @@ namespace ForecastingModule
             int rowIndex = dataGridView.Rows.Count;//headers (2) rows have already added, so start from 3
 
             List<Tuple<int, int>> higlightRowColumnList = new List<Tuple<int, int>>();
-            SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel = operationService.retrieveExistedOperationsPlanning(selectedTab);
+            //SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel = operationService.retrieveExistedOperationsPlanning(selectedTab);
+            SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel = operationService.retrieveOperationsByModel(this.selectedSubTab);
 
+            populateForecastingWhileRefreshing(refreshFromOperationPlannig, operationModel);
 
             foreach (var saleCode in saleCodes)
             {
@@ -215,7 +217,7 @@ namespace ForecastingModule
                             }
                             row.Add(count != null ? count : 0);//added cell position and add forecast count anyway
                         }
-                        else if (refreshFromOperationPlannig)
+                        /*else if (refreshFromOperationPlannig)
                         {
                             //update the model
                             if (operationParams != null || saleParams != null)
@@ -254,7 +256,7 @@ namespace ForecastingModule
                                 log.LogInfo($"Base sale operation with sale code {saleCode} by date {operationDate} does not exist in OperationTable but exist in Forecast");
                                 row.Add(count != null ? count : 0);
                             }
-                        }
+                        }*/
                         else
                         {
                             row.Add(count != null ? count : 0);
@@ -273,6 +275,14 @@ namespace ForecastingModule
             operationModel = null;
 
             return higlightRowColumnList;
+        }
+
+        private void populateForecastingWhileRefreshing(bool refreshFromOperationPlannig, SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel)
+        {
+            if (refreshFromOperationPlannig)
+            {
+                this.isModelUpdated = Calculation.populateBase0Forecasting(operationModel, this.selectedTabModel);
+            }
         }
 
         private object refreshBase0Value(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel, int currentPercentage, DateTime operationDate, bool baseFlag, object operationCount)

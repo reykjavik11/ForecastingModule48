@@ -39,6 +39,23 @@ namespace ForecastingModule.Service.Impl
             return syncLinkedDictionary;
         }
 
+        public SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> retrieveOperationsByModel(string model)
+        {
+            SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> syncLinkedDictionary;
+            try
+            {
+                syncLinkedDictionary = repositoryImpl.retrieveOperationsByModel(model);
+
+                Calculation.addTotal(syncLinkedDictionary);
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.LogError(ex.StackTrace);
+                throw ex;
+            }
+            return syncLinkedDictionary;
+        }
+
         public int save(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data)
         {
             try
