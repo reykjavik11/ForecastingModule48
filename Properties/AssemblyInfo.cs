@@ -33,6 +33,6 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 //Used by the runtime to bind assemblies. Update this only for breaking changes.
-[assembly: AssemblyVersion("0.8.0.0")]
+[assembly: AssemblyVersion("0.8.0.1")]
 //Represents the specific build of the file. Update this for every build/release.
-[assembly: AssemblyFileVersion("0.8.0.2")]
+[assembly: AssemblyFileVersion("0.8.0.4")]

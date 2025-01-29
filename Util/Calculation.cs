@@ -55,7 +55,7 @@ namespace ForecastingModule.Util
             return sum;
         }
 
-        public static bool populateBase0Forecasting(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operPlanningMap,
+        public static bool populateForecasting(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operPlanningMap,
                                                  SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> forecastMap)
         {
             bool anyUpdate = false;
@@ -137,7 +137,7 @@ namespace ForecastingModule.Util
                                                       int forecastPercentage,
                                                       string forecastSaleCode,
                                                       string model,
-                                                      bool forecastFlagBaseOrNot)
+                                                      bool forecastFlagBase)
         {
             //bool anyUpdate = false;
             float carryOverFromPrevMonth = 0;
@@ -147,75 +147,83 @@ namespace ForecastingModule.Util
 
                 List<DateTime> operationsDates = getSortedOperationsDates(operParams);
 
-                //foreach (object paramKey in operParams.Keys.ToList())
-                //{
-                //    if (paramKey is DateTime operDate)
-                //    {
                 foreach (DateTime operDate in operationsDates)
                 {
                     DateTime forecastDate = DateUtil.toForecastDay(operDate);
                     bool updated = false;
-                    if (forecastFlagBaseOrNot)//update forecast base flag = 1 if it not compare with OperPlanning (base flag = 1)
+                    if (forecastFlagBase)//update forecast base flag = 1 if it not compare with OperPlanning (base flag = 1)
                     {
-                        object operObject = operParams.Get(operDate);
-                        object forecastCount = forecastParams.Get(forecastDate);
-                        
-                        bool sameSaleCodeAndBaseCode = forecastSaleCode.Equals(operKey);
-                        bool baseFromOPNotNull = operObject is int operPlanCount && !operObject.Equals(forecastCount);
-                        bool baseFromForecastingNotNull = forecastCount is int && !forecastCount.Equals(operObject);
-                        if ((baseFromOPNotNull || baseFromForecastingNotNull) && sameSaleCodeAndBaseCode)
-                        {
-                            if (forecastParams.Keys.Contains(forecastDate))
-                            {
-                                updated = forecastParams.Update(forecastDate, operObject, forecastCount);//TODO is better to change if 0 to null?
-                            }
-                            else
-                            {
-                                updated = true;
-                                forecastParams.Add(forecastDate, operObject);
-                            }
-                        }
+                        updated = updateBase1(forecastParams, forecastSaleCode, operKey, operParams, operDate, forecastDate, updated);
                     }
                     else
                     {
-                        int base1ColumnSum = Calculation.getBaseSumByDate(operPlanningMap, operDate, model);//calculate sum from base =1 OP data by specific date
-                        float countFromBase0Percentage = base1ColumnSum * ((float)forecastPercentage / 100);//calculate specific percantage value from base OP data
-
-                        float floatresult = countFromBase0Percentage + carryOverFromPrevMonth;//calculate float result 
-                        floatresult = (floatresult - (int)floatresult >= 0.9f) ? (float)Math.Ceiling(floatresult) : floatresult;// rounded if partial part >= 0.9 
-
-                        int result = (int)floatresult;//cast float result to int
-
-                        carryOverFromPrevMonth = floatresult - result;//calculate fraction on cuurent month taht will be carred out on next month 
-
-                        object prevCount = forecastParams.Get(operDate);
-
-                        //bool updated = false;
-                        //DateTime forecastDate = DateUtil.toForecastDay(operDate);
-                        if (forecastParams.Keys.Contains(forecastDate))
-                        {
-                            //updated = forecastParams.Update(operDate, result, prevCount);//TODO is better to change if 0 to null?
-                            updated = forecastParams.Update(forecastDate, result, prevCount);//TODO is better to change if 0 to null?
-                        }
-                        else
-                        {
-                            updated = true;
-                            forecastParams.Add(forecastDate, result);
-                        }
-                        //if (updated && !anyUpdate)
-                        //{
-                        //    anyUpdate = true;
-                        //}
+                        updated = updateBase0(operPlanningMap, forecastParams, forecastPercentage, model, ref carryOverFromPrevMonth, operDate, forecastDate);
                     }
                     if (updated && !anyUpdate)
                     {
                         anyUpdate = true;
                     }
-                    //    }
-                    //}
                 }
             }
             return anyUpdate;
+        }
+
+        private static bool updateBase0(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operPlanningMap, 
+                                        SyncLinkedDictionary<object, object> forecastParams, 
+                                        int forecastPercentage, 
+                                        string model, 
+                                        ref float carryOverFromPrevMonth, 
+                                        DateTime operDate, 
+                                        DateTime forecastDate)
+        {
+            bool updated;
+            int base1ColumnSum = Calculation.getBaseSumByDate(operPlanningMap, operDate, model);//calculate sum from base =1 OP data by specific date
+            float countFromBase0Percentage = base1ColumnSum * ((float)forecastPercentage / 100);//calculate specific percantage value from base OP data
+
+            float floatresult = countFromBase0Percentage + carryOverFromPrevMonth;//calculate float result 
+            floatresult = (floatresult - (int)floatresult >= 0.9f) ? (float)Math.Ceiling(floatresult) : floatresult;// rounded if partial part >= 0.9 
+
+            int result = (int)floatresult;//cast float result to int
+
+            carryOverFromPrevMonth = floatresult - result;//calculate fraction on cuurent month taht will be carred out on next month 
+
+            object prevCount = forecastParams.Get(operDate);
+
+            if (forecastParams.Keys.Contains(forecastDate))
+            {
+                updated = forecastParams.Update(forecastDate, result, prevCount);//TODO is better to change if 0 to null?
+            }
+            else
+            {
+                updated = true;
+                forecastParams.Add(forecastDate, result);
+            }
+
+            return updated;
+        }
+
+        private static bool updateBase1(SyncLinkedDictionary<object, object> forecastParams, string forecastSaleCode, string operKey, SyncLinkedDictionary<object, object> operParams, DateTime operDate, DateTime forecastDate, bool updated)
+        {
+            object operObject = operParams.Get(operDate);
+            object forecastCount = forecastParams.Get(forecastDate);
+
+            bool sameSaleCodeAndBaseCode = forecastSaleCode.Equals(operKey);
+            bool baseFromOPNotNull = operObject is int operPlanCount && !operObject.Equals(forecastCount);
+            bool baseFromForecastingNotNull = forecastCount is int && !forecastCount.Equals(operObject);
+            if ((baseFromOPNotNull || baseFromForecastingNotNull) && sameSaleCodeAndBaseCode)
+            {
+                if (forecastParams.Keys.Contains(forecastDate))
+                {
+                    updated = forecastParams.Update(forecastDate, operObject, forecastCount);//TODO is better to change if 0 to null?
+                }
+                else
+                {
+                    updated = true;
+                    forecastParams.Add(forecastDate, operObject);
+                }
+            }
+
+            return updated;
         }
 
         private static List<DateTime> getSortedOperationsDates(SyncLinkedDictionary<object, object> operParams)

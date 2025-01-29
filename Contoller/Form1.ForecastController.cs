@@ -131,7 +131,7 @@ namespace ForecastingModule
                 populateBodyForecasting(forecastDates, dataGridView, saleCodes, refreshFromOperationPlannig);
 
             colorToRedNotMatchedCells(diffrenceForecastWithOPCellCoordinates, dataGridView);
-            colorAllNotCorrectTotals(dataGridView);
+            //colorAllNotCorrectTotals(dataGridView);//disable TOTAL color
         }
 
 
@@ -173,7 +173,6 @@ namespace ForecastingModule
             int rowIndex = dataGridView.Rows.Count;//headers (2) rows have already added, so start from 3
 
             List<Tuple<int, int>> higlightRowColumnList = new List<Tuple<int, int>>();
-            //SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel = operationService.retrieveExistedOperationsPlanning(selectedTab);
             SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operationModel = operationService.retrieveOperationsByModel(this.selectedSubTab);
 
             populateForecastingWhileRefreshing(refreshFromOperationPlannig, operationModel);
@@ -217,46 +216,6 @@ namespace ForecastingModule
                             }
                             row.Add(count != null ? count : 0);//added cell position and add forecast count anyway
                         }
-                        /*else if (refreshFromOperationPlannig)
-                        {
-                            //update the model
-                            if (operationParams != null || saleParams != null)
-                            {
-                                object operationCount = operationParams != null ? operationParams.GetOrDefault(operationDate, 0) : saleParams.GetOrDefault(operationDate, 0);
-
-                                operationCount = refreshBase0Value(operationModel, currentPercentage, operationDate, baseFlag, operationCount);
-
-                                if (!count.Equals(operationCount))//change count from Operation planning if there are not equal
-                                {
-                                    row.Add(operationCount != null ? operationCount : 0);
-
-                                    object forecastObject = saleParams.Get(forecastDate);
-                                    if (forecastObject != null)
-                                    {
-                                        saleParams.Update(forecastDate, operationCount, count);//Update forecast model from Operation planning value
-                                    }
-                                    else
-                                    {
-                                        saleParams.Add(forecastDate, operationCount);//Add forecast model from Operation planning value
-                                    }
-
-                                    addTotalToRefreshedRow(saleCode, saleParams);
-
-                                    log.LogInfo($"{selectedTab} - {selectedSubTab} [baseFlag - {baseFlag}]. Refresh cell: row: {rowIndex}, coulumn: {columnIndex}. OperPlanning date: {operationDate} Base sale code: {saleCode}. Forecast value: {count} will change to Operation planning value: {operationCount} ");
-
-                                    this.isModelUpdated = true;//set model true in case model been changed and user will be switch to diff tab 
-                                }
-                                else
-                                {
-                                    row.Add(count != null ? count : 0);
-                                }
-                            }
-                            else//just exception case that base sale operation sale code by code {saleCode} by date {operationDate} does not exist in OperationTable but exist in Forecast
-                            {
-                                log.LogInfo($"Base sale operation with sale code {saleCode} by date {operationDate} does not exist in OperationTable but exist in Forecast");
-                                row.Add(count != null ? count : 0);
-                            }
-                        }*/
                         else
                         {
                             row.Add(count != null ? count : 0);
@@ -281,7 +240,7 @@ namespace ForecastingModule
         {
             if (refreshFromOperationPlannig)
             {
-                this.isModelUpdated = Calculation.populateBase0Forecasting(operationModel, this.selectedTabModel);
+                this.isModelUpdated = Calculation.populateForecasting(operationModel, this.selectedTabModel);
             }
         }
 
@@ -567,7 +526,7 @@ namespace ForecastingModule
                 dataGridView[dataGridView.ColumnCount - 2, rowIndex].Value = total;
 
                 Tuple<int, float> percentageBaseTuple = findBaseTotalAndPercentage(this.selectedTabModel);
-                colorCellIfWrongTotal(dataGridView, rowIndex, percentageBaseTuple);
+                //colorCellIfWrongTotal(dataGridView, rowIndex, percentageBaseTuple);//Disable worng TOTAL
             }
         }
         private void OnDataGridView_ForecastValidating(object sender, DataGridViewCellValidatingEventArgs e)
@@ -737,13 +696,16 @@ namespace ForecastingModule
 
         private void printRefreshStatus()
         {
-            if (validateRefreshData(this.selectedTabModel))
+            if (this.isModelUpdated)
             {
                 this.statusLabel.Text = "Data has been refreshed. Hit the 'Save' button for persist the changes.";
             }
-            else
+            else if (!validateRefreshData(this.selectedTabModel))
             {
                 this.statusLabel.Text = "No Data to refresh.";
+            } else
+            {
+                this.statusLabel.Text = "No changes after refreshing.";
             }
         }
 
