@@ -140,13 +140,6 @@ namespace ForecastingModule.Util
                                                       string model,
                                                       bool forecastFlagBase)
         {
-            //String firstOperSaleCode = operPlanningMap.Keys.First();
-            //SyncLinkedDictionary<object, object> operFirstParams = operPlanningMap.Get(firstOperSaleCode);
-            //if (operFirstParams == null)
-            //{
-            //    return false;
-            //}
-            //List<DateTime> operationsDates = getSortedOperationsDates(operFirstParams);
             List<DateTime> operationsDates = returnSortedOperDates(operPlanningMap);
 
             float carryOverFromPrevMonth = 0;
