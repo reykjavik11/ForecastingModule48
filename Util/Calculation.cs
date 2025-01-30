@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using ForecastingModule.Helper;
@@ -139,41 +140,77 @@ namespace ForecastingModule.Util
                                                       string model,
                                                       bool forecastFlagBase)
         {
-            //bool anyUpdate = false;
+            //String firstOperSaleCode = operPlanningMap.Keys.First();
+            //SyncLinkedDictionary<object, object> operFirstParams = operPlanningMap.Get(firstOperSaleCode);
+            //if (operFirstParams == null)
+            //{
+            //    return false;
+            //}
+            //List<DateTime> operationsDates = getSortedOperationsDates(operFirstParams);
+            List<DateTime> operationsDates = returnSortedOperDates(operPlanningMap);
+
             float carryOverFromPrevMonth = 0;
-            foreach (string operKey in operPlanningMap.Keys.ToList())
+
+            if (!forecastFlagBase)
             {
-                SyncLinkedDictionary<object, object> operParams = operPlanningMap.Get(operKey);
-
-                List<DateTime> operationsDates = getSortedOperationsDates(operParams);
-
                 foreach (DateTime operDate in operationsDates)
                 {
                     DateTime forecastDate = DateUtil.toForecastDay(operDate);
                     bool updated = false;
-                    if (forecastFlagBase)//update forecast base flag = 1 if it not compare with OperPlanning (base flag = 1)
-                    {
-                        updated = updateBase1(forecastParams, forecastSaleCode, operKey, operParams, operDate, forecastDate, updated);
-                    }
-                    else
-                    {
-                        updated = updateBase0(operPlanningMap, forecastParams, forecastPercentage, model, ref carryOverFromPrevMonth, operDate, forecastDate);
-                    }
+                    updated = updateBase0(operPlanningMap, forecastParams, forecastPercentage, model, ref carryOverFromPrevMonth, operDate, forecastDate);
                     if (updated && !anyUpdate)
                     {
                         anyUpdate = true;
                     }
                 }
             }
+            else
+            {
+                foreach (string operKey in operPlanningMap.Keys.ToList())
+                {
+                    SyncLinkedDictionary<object, object> operParams = operPlanningMap.Get(operKey);
+
+                    foreach (DateTime operDate in operationsDates)
+                    {
+                        DateTime forecastDate = DateUtil.toForecastDay(operDate);
+                        bool updated = false;
+                        updated = updateBase1(forecastParams, forecastSaleCode, operKey, operParams, operDate, forecastDate, updated);
+                        if (updated && !anyUpdate)
+                        {
+                            anyUpdate = true;
+                        }
+                    }
+                }
+            }
             return anyUpdate;
         }
 
-        private static bool updateBase0(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operPlanningMap, 
-                                        SyncLinkedDictionary<object, object> forecastParams, 
-                                        int forecastPercentage, 
-                                        string model, 
-                                        ref float carryOverFromPrevMonth, 
-                                        DateTime operDate, 
+        private static List<DateTime> returnSortedOperDates(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operPlanningMap)
+        {
+            HashSet<DateTime> operationsDatesSet = new HashSet<DateTime>();
+            foreach (string operSaleCode in operPlanningMap.Keys.ToList())
+            {
+                SyncLinkedDictionary<object, object> operParams = operPlanningMap.Get(operSaleCode);
+
+                foreach (object operKey in operParams.Keys)
+                {
+                    if (operKey is DateTime operDate)
+                    {
+                        operationsDatesSet.Add(operDate);
+                    }
+                }
+            }
+            List<DateTime> operationsDates = new List<DateTime>(operationsDatesSet);
+            operationsDates.Sort();
+            return operationsDates;
+        }
+
+        private static bool updateBase0(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> operPlanningMap,
+                                        SyncLinkedDictionary<object, object> forecastParams,
+                                        int forecastPercentage,
+                                        string model,
+                                        ref float carryOverFromPrevMonth,
+                                        DateTime operDate,
                                         DateTime forecastDate)
         {
             bool updated;
@@ -187,7 +224,8 @@ namespace ForecastingModule.Util
 
             carryOverFromPrevMonth = floatresult - result;//calculate fraction on cuurent month taht will be carred out on next month 
 
-            object prevCount = forecastParams.Get(operDate);
+            //object prevCount = forecastParams.Get(operDate);
+            object prevCount = forecastParams.Get(forecastDate);
 
             if (forecastParams.Keys.Contains(forecastDate))
             {
