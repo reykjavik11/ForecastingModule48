@@ -211,7 +211,8 @@ namespace ForecastingModule.Util
             float countFromBase0Percentage = base1ColumnSum * ((float)forecastPercentage / 100);//calculate specific percantage value from base OP data
 
             float floatresult = countFromBase0Percentage + carryOverFromPrevMonth;//calculate float result 
-            floatresult = (floatresult - (int)floatresult >= 0.9f) ? (float)Math.Ceiling(floatresult) : floatresult;// rounded if partial part >= 0.9 
+            //floatresult = (floatresult - (int)floatresult >= 0.9f) ? (float)Math.Ceiling(floatresult) : floatresult;// rounded if partial part >= 0.9 
+            floatresult = (floatresult - (int)floatresult >= 0.98f) ? (float)Math.Ceiling(floatresult) : floatresult;// rounded if partial part >= 0.9 
 
             int result = (int)floatresult;//cast float result to int
 
@@ -222,7 +223,8 @@ namespace ForecastingModule.Util
 
             if (forecastParams.Keys.Contains(forecastDate))
             {
-                updated = forecastParams.Update(forecastDate, result, prevCount);//TODO is better to change if 0 to null?
+                forecastParams.Update(forecastDate, result, prevCount);
+                updated = prevCount == null? !((object)0).Equals(result) : !prevCount.Equals(result);//can be add if updated  = true for update hashmap only if old and new value if diffrent
             }
             else
             {
