@@ -143,6 +143,12 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Form\SettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Form\SettingsForm.Designer.cs">
+      <DependentUpon>SettingsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Form\LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -178,6 +184,7 @@
     <Compile Include="Service\UserService.cs" />
     <Compile Include="Helper\Optional.cs" />
     <Compile Include="Util\Calculation.cs" />
+    <Compile Include="Util\IconExtractor.cs" />
     <Compile Include="Util\SqlHelper.cs" />
     <Compile Include="Util\DateUtil.cs" />
     <Compile Include="Util\Validator.cs" />
@@ -221,6 +228,8 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="SettingForm\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

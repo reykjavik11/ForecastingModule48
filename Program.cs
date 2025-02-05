@@ -36,6 +36,7 @@ namespace ForecastingModule
             }
             catch (Exception ex)
             {
+                log.LogError(ex.Message);
                 log.LogError(ex.StackTrace);
             }
         }

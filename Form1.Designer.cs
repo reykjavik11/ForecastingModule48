@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using ForecastingModule.Helper;
+using ForecastingModule.OtherForm;
 using ForecastingModule.Repository.Impl;
 using ForecastingModule.Service;
 using ForecastingModule.Service.Impl;
@@ -165,9 +166,11 @@ namespace ForecastingModule
                     Size = new Size(80, 40)
                 };
                 // Set the gear icon using the system icon
-                Icon gearIcon = SystemIcons.Application; // Replace with a gear icon from your resources if needed
+                //Icon gearIcon = SystemIcons.Application; // Replace with a gear icon from your resources if needed
+                Icon gearIcon = IconExtractor.Extract("imageres.dll", 109); //109 - icon - gear with checkbox.
                 operationSetting.Image = gearIcon.ToBitmap();
                 operationSetting.TextImageRelation = TextImageRelation.ImageBeforeText;
+                operationSetting.Tag = "Operation Settings";
 
                 operationSetting.Click += OnOperationsSettingsButtons_Click;
                 operationButtonsPanel.Controls.Add(operationSetting);
@@ -205,7 +208,15 @@ namespace ForecastingModule
 
         private void OnOperationsSettingsButtons_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Operations Planning Setting has not implemented yet.");
+            try
+            {
+                SettingsView settingsForm = new SettingsView();
+                settingsForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                log.LogError(ex.Message);
+            }
         }
 
         private async void OnSaveOperationButtons_ClickAsync(object sender, EventArgs e)
@@ -434,7 +445,6 @@ namespace ForecastingModule
                     Dock = DockStyle.Fill,
                     ColumnCount = numCoLumns + 1,
                     ColumnHeadersVisible = false,
-                    //RowHeadersVisible = false
                 };
                 dataGridView.AllowUserToAddRows = false;
 
@@ -684,7 +694,7 @@ namespace ForecastingModule
                     //recalculate the total
                     updateOperationsTotalCell(updateInfo.ColumnIndex, updateInfo.RowIndex, dataGridView, (string)updateInfo.NewValue);
 
-                    // Clear the tag
+                    // Clear the tag and flag: isModelUpdated 
                     dataGridView.Tag = null;
                     isModelUpdated = true;
                 }
