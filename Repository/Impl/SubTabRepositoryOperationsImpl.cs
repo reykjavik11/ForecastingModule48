@@ -29,7 +29,8 @@ namespace ForecastingModule.Repository.Impl
                 {
                     connection.Open();
 
-                    using (var command = new SqlCommand("select distinct sc.SC_OperationsTab, t1.TAB_DisplayOrder  from [WeilerForecasting].[dbo].[SalesCodes] as sc  join (selecT pt.TAB_TabName, pt.TAB_DisplayOrder  from [WeilerForecasting].[dbo].ParentTabs as pt) as t1 on t1.TAB_TabName = sc.SC_ForecastTab  and sc.SC_ActiveFlag =1   and sc.SC_BaseFlag = 1  order by t1.TAB_DisplayOrder", connection))
+                    //using (var command = new SqlCommand("select distinct sc.SC_OperationsTab, t1.TAB_DisplayOrder  from [WeilerForecasting].[dbo].[SalesCodes] as sc  join (selecT pt.TAB_TabName, pt.TAB_DisplayOrder  from [WeilerForecasting].[dbo].ParentTabs as pt) as t1 on t1.TAB_TabName = sc.SC_ForecastTab  and sc.SC_ActiveFlag =1   and sc.SC_BaseFlag = 1  order by t1.TAB_DisplayOrder", connection))
+                    using (var command = new SqlCommand("select distinct sc.SC_OperationsTab, t1.TAB_DisplayOrder  from [WeilerForecasting].[dbo].[SalesCodes] as sc join (selecT pt.TAB_TabName, pt.TAB_DisplayOrder  from [WeilerForecasting].[dbo].ParentTabs as pt) as t1  on t1.TAB_TabName = sc.SC_ForecastTab and sc.SC_ActiveFlag =1  and sc.SC_BaseFlag = 1  join [WeilerForecasting].[dbo].OperationsSettings os on os.OPS_Tab = sc.SC_OperationsTab and os.OPS_ActiveFlag =1  order by t1.TAB_DisplayOrder", connection))
                     {
                         using (var reader = command.ExecuteReader())
                         {
