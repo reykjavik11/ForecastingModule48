@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using ForecastingModule.Controller;
 using ForecastingModule.Helper;
 using ForecastingModule.OtherForm;
 using ForecastingModule.Repository.Impl;
@@ -206,17 +207,36 @@ namespace ForecastingModule
             return operationButtonsPanel;
         }
 
-        private void OnOperationsSettingsButtons_Click(object sender, EventArgs e)
+        private async void OnOperationsSettingsButtons_Click(object sender, EventArgs e)
         {
-            try
+            await Task.Run(() =>
             {
-                SettingsView settingsForm = new SettingsView();
-                settingsForm.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                log.LogError(ex.Message);
-            }
+                try
+                {
+                    string editedTable = "OperationsSettings";
+                    Optional<Tuple<string, List<Tuple<string, string>>>> optional = InformationSchemaServiceImpl.Instance.getColumsMetaByTable(editedTable);
+                    Invoke((Action)(() =>
+                    {
+                        if (!optional.HasValue)
+                        {
+                            throw new InvalidOperationException($"No meta's information by {editedTable}.");
+                        }
+                        Tuple<string, List<Tuple<string, string>>> model = optional.Get();
+                        SettingsView settingsForm = new SettingsView(model);
+                        string query = $"SELECT * FROM OperationsSettings order by OPS_DisplayOrder";
+
+                        SettingsController settingsController = new SettingsController(model, settingsForm, query);
+                        settingsForm.ShowDialog();
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        log.LogError(ex.Message);
+                    }));
+                }
+            });
         }
 
         private async void OnSaveOperationButtons_ClickAsync(object sender, EventArgs e)

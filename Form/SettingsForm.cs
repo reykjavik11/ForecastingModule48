@@ -1,19 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using ForecastingModule.Controller;
 
 namespace ForecastingModule.OtherForm
 {
-    public partial class SettingsView : Form
+    public partial class SettingsView : Form, IView
     {
-        public SettingsView()
+        public SettingsView(Tuple<String, List<Tuple<String, String>>> model)
         {
+            setModel(model);
+            this.table = model.Item1;
+
             InitializeComponent();
         }
     }
