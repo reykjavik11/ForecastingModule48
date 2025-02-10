@@ -34,4 +34,4 @@ using System.Runtime.InteropServices;
 //Used by the runtime to bind assemblies. Update this only for breaking changes.
 [assembly: AssemblyVersion("0.9.0.0")]
 //Represents the specific build of the file. Update this for every build/release.
-[assembly: AssemblyFileVersion("0.9.0.1")]
+[assembly: AssemblyFileVersion("0.9.0.2")]

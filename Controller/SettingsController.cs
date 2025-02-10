@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using ForecastingModule.Helper;
@@ -9,12 +10,20 @@ namespace ForecastingModule.Controller
 {
     internal class SettingsController : BaseController, ISettingConntroller
     {
+        private readonly Dictionary<string, Func<object>> TYPE_VALUE_MAP = new Dictionary<string, Func<object>> {
+                { "uniqueidentifier", () => Guid.NewGuid() },
+                { "nvarchar", () => "" },
+                { "int", () => 0 },
+                { "bit", () => 1 }
+            };
+
         private SqlDataAdapter adapter;
         private DataTable dataTable;
 
         private DataRow newRow; // To track new row
 
         private readonly string selectedTableQuery;
+        private static readonly Logger log = Logger.Instance;
         public SettingsController(object model, IView view, string selectedTableQuery) : base(model, view)
         {
             this.selectedTableQuery = selectedTableQuery;
@@ -44,16 +53,21 @@ namespace ForecastingModule.Controller
 
         public void Insert()
         {
-            // Add a new row to the DataTable
             newRow = dataTable.NewRow();
-            //set default values
-            newRow["OPS_RecordID"] = Guid.NewGuid(); 
-            newRow["OPS_Tab"] = ""; 
-            newRow["OPS_NbrMonths"] = 18; 
-            newRow["OPS_NbrDays"] = 60; 
-            newRow["OPS_ActiveFlag"] = 1; 
-            newRow["OPS_DisplayOrder"] = 0; 
-            newRow["OPS_Comments"] = ""; 
+
+            Tuple<string, List<Tuple<string, string>>> locaModel = ((Tuple<string, List<Tuple<string, string>>>)(this.model));
+            List<Tuple<string, string>> nameTypeList = locaModel.Item2;//return name - type tuple 
+            foreach (Tuple<string, string> item in nameTypeList)//iterate by item1 - columnName, item2 - column type
+            {
+                Func<object> value;
+                TYPE_VALUE_MAP.TryGetValue(item.Item2, out value);//serach be type name 
+                if(value == null)
+                {
+                    log.LogWarning($"Table {locaModel.Item1} - column {item.Item1} with type {item.Item2} does not find in typeValueMap.");
+                    continue;
+                }
+                newRow[item.Item1]  = value.Invoke();//call method from typeValueMap
+            }
 
             // Add the new row to the DataTable
             dataTable.Rows.Add(newRow);

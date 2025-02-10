@@ -33,10 +33,10 @@ namespace ForecastingModule.Repository.Impl
                         {
                             while (reader.Read())
                             {
-                                string tabName = reader.GetString(reader.GetOrdinal("COLUMN_NAME"));
+                                string columnName = reader.GetString(reader.GetOrdinal("COLUMN_NAME"));
                                 string dataType = reader.GetString(reader.GetOrdinal("DATA_TYPE"));
 
-                                columnsMeta.Add(Tuple.Create(tableName, dataType));
+                                columnsMeta.Add(Tuple.Create(columnName, dataType));
                             }
                         }
                     }
