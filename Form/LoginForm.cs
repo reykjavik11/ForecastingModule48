@@ -28,6 +28,7 @@ namespace ForecastingModule.OtherForm
             this.Text = "Login";
             this.Size = new Size(300, WIDTH);
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.Icon = SystemInfo.GetAppIcon();
 
             var labelUserName = new Label
             {

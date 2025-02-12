@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Windows.Forms;
+using ForecastingModule.Util;
 using ForecastingModule.Utilities;
 
 namespace ForecastingModule.OtherForm
@@ -65,7 +66,7 @@ namespace ForecastingModule.OtherForm
             this.components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 500);
-            this.Text = "Settings";//Model should contain setting's name 
+            this.Icon = SystemInfo.GetAppIcon();
 
             // Initialize UI elements
             this.dataGridView = new DataGridView();

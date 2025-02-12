@@ -78,6 +78,8 @@ namespace ForecastingModule
             ClientSize = new Size(800, 450);
             Name = "Form1";
             Text = $"Forecasting Module - [ {UserSession.GetInstance().User.userName} ]";
+            this.Icon = SystemInfo.GetAppIcon();
+
             ResumeLayout(false);
 
             populateTabList();
