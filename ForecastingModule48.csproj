@@ -204,6 +204,7 @@
     <Compile Include="Service\UserService.cs" />
     <Compile Include="Helper\Optional.cs" />
     <Compile Include="Util\Calculation.cs" />
+    <Compile Include="Util\Dialog.cs" />
     <Compile Include="Util\IconExtractor.cs" />
     <Compile Include="Util\SqlHelper.cs" />
     <Compile Include="Util\DateUtil.cs" />

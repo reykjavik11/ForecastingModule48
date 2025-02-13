@@ -12,6 +12,7 @@ using ForecastingModule.Service;
 using ForecastingModule.Service.Impl;
 using ForecastingModule.Util;
 using ForecastingModule.Utilities;
+using static ForecastingModule.Util.Dialog;
 
 namespace ForecastingModule
 {
@@ -215,20 +216,9 @@ namespace ForecastingModule
             {
                 try
                 {
-                    string editedTable = "OperationsSettings";
-                    Optional<Tuple<string, List<Tuple<string, string>>>> optional = InformationSchemaServiceImpl.Instance.getColumsMetaByTable(editedTable);
                     Invoke((Action)(() =>
                     {
-                        if (!optional.HasValue)
-                        {
-                            throw new InvalidOperationException($"No meta's information by {editedTable}.");
-                        }
-                        Tuple<string, List<Tuple<string, string>>> model = optional.Get();
-                        SettingsView settingsForm = new SettingsView(model);
-                        string query = $"SELECT * FROM OperationsSettings order by OPS_DisplayOrder";
-
-                        SettingsController settingsController = new SettingsController(model, settingsForm, query);
-                        settingsForm.ShowDialog();
+                        Dialog.showManageTableDialog(Tables.OPERATIONS_SETTINGS.Value);
                     }));
                 }
                 catch (Exception ex)
@@ -236,6 +226,7 @@ namespace ForecastingModule
                     Invoke((Action)(() =>
                     {
                         log.LogError(ex.Message);
+                        log.LogError(ex.StackTrace);
                     }));
                 }
             });

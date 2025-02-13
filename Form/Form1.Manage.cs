@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using ForecastingModule.OtherForm;
 using ForecastingModule.Service;
+using ForecastingModule.Util;
+using static ForecastingModule.Util.Dialog;
 
 namespace ForecastingModule
 {
@@ -90,7 +93,7 @@ namespace ForecastingModule
 
         private void OnManageSalesCodes_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("OnManageSalesCodes_Click");
+            runAsync(Tables.SALES_CODES.Value);
         }
 
         private void OnManageUsers_Click(object sender, EventArgs e)
@@ -103,9 +106,31 @@ namespace ForecastingModule
             MessageBox.Show("OnManageSubTabs_Click");
         }
 
-        private void OnManageForecast_Click(object sender, EventArgs e)
+        private  void OnManageForecast_Click(object sender, EventArgs e)
         {
             MessageBox.Show("OnManageForecast_Click");
+        }
+
+        public async void runAsync(string table)
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    Invoke((Action)(() =>
+                    {
+                        Dialog.showManageTableDialog(table);
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Invoke((Action)(() =>
+                    {
+                        log.LogError(ex.Message);
+                        log.LogError(ex.StackTrace);
+                    }));
+                }
+            });
         }
     }
 }
