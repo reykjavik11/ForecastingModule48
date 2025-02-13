@@ -21,7 +21,7 @@ namespace ForecastingModule.OtherForm
         /// Required designer variable.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
-        private const int BUTTON_HEIGHT = 40;
+        public const int BUTTON_HEIGHT = 40;
 
         private Tuple<String, List<Tuple<String, String>>>  model;
         /// Handlers <summary>

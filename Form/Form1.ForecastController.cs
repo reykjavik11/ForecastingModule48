@@ -56,12 +56,12 @@ namespace ForecastingModule
 
                 selectedTab.Controls.Add(forecastDataGridView);
 
-                bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessForecast;
+                bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessForecastSettings;
                 if (readOnlyMode)
                 {
                     forecastDataGridView.ReadOnly = true;
 
-                    string message = $"{selectedSubTabName} data is read only.";
+                    string message = $"{selectedTabName} data is read only.";
                     log.LogInfo(message);
                     statusLabel.Text = message;
                 }
@@ -571,7 +571,7 @@ namespace ForecastingModule
             };
 
 
-            if (UserSession.GetInstance().User.accessForecast)
+            if (UserSession.GetInstance().User.accessForecastSettings)
             {
                 Button refreshForecast = null;
                 Button saveOperations = null;

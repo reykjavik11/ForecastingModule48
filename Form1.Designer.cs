@@ -19,6 +19,8 @@ namespace ForecastingModule
     {
         private const string ITEM_OPERATION_PLANNING = "OPERATIONS PLANNING";
         private const string ITEM_MANANGE = "MANAGE";
+        private const string MESSAGE_NO_PERMISSION = "No permission.";
+
         private SplitContainer splitContainer;
         private TabControl tabControl;
         private ToolStripStatusLabel statusLabel;
@@ -177,9 +179,7 @@ namespace ForecastingModule
 
                 operationSetting.Click += OnOperationsSettingsButtons_Click;
                 operationButtonsPanel.Controls.Add(operationSetting);
-            }
-            if (UserSession.GetInstance().User.accessOperationsPlanning)
-            {
+                
                 saveOperations = new Button
                 {
                     Text = "SAVE",
@@ -369,11 +369,19 @@ namespace ForecastingModule
             statusStrip = createStatusStrip();
             if (menuName == ITEM_OPERATION_PLANNING)
             {
-                await populateSubTabs();
+                if (UserSession.GetInstance().User.accessOperationsPlanning)
+                {
+                    await populateSubTabs();
+                    //add panal with Operation Planning buttons (if accessible)
+                    buttomButtonPanel = createOperationButtonsPanel();
+                    splitContainer.Panel2.Controls.Add(buttomButtonPanel);
+                } else
+                {
+                    statusLabel.Text = MESSAGE_NO_PERMISSION;
+                }
 
-                //add panal with Operation Planning buttons (if accessible)
-                buttomButtonPanel = createOperationButtonsPanel();
-                splitContainer.Panel2.Controls.Add(buttomButtonPanel);
+                //buttomButtonPanel = createOperationButtonsPanel();
+                //splitContainer.Panel2.Controls.Add(buttomButtonPanel);
             }
             else if (menuName == "MANAGE")
             {
@@ -381,9 +389,17 @@ namespace ForecastingModule
             }
             else
             {//Forecast
-                await populateSubTabs(menuName);
-                buttomButtonPanel = createForecastButtonsPanel();
-                splitContainer.Panel2.Controls.Add(buttomButtonPanel);
+                if (UserSession.GetInstance().User.accessForecast)
+                { 
+                    await populateSubTabs(menuName);
+                    buttomButtonPanel = createForecastButtonsPanel();
+                    splitContainer.Panel2.Controls.Add(buttomButtonPanel);
+                } else
+                {
+                    statusLabel.Text = MESSAGE_NO_PERMISSION;
+                }
+                //buttomButtonPanel = createForecastButtonsPanel();
+                //splitContainer.Panel2.Controls.Add(buttomButtonPanel);
             }
             splitContainer.Panel2.Controls.Add(statusStrip);
         }
@@ -399,20 +415,6 @@ namespace ForecastingModule
                     this.Text = mainHeaderText + $" -> {selectedTab}";
                 }
             }
-        }
-
-        private void populateManageTab(string menuName)
-        {
-            var tabPage = new TabPage(menuName);
-            var label = new Label
-            {
-                Text = "MANAGE has not implemented yet.",
-                Dock = DockStyle.Fill,
-                TextAlign = System.Drawing.ContentAlignment.MiddleCenter
-            };
-            tabPage.Controls.Add(label);
-            tabControl.TabPages.Add(tabPage);
-            tabControl.SelectedTab = tabPage;
         }
 
         private void OnChangeTheTab(object sender, TabControlCancelEventArgs e)
@@ -476,12 +478,12 @@ namespace ForecastingModule
 
                 createAndPopulateComments(selectedTab, selectedSubTabName, dataGridView);
 
-                bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessOperationsPlanning;
+                bool readOnlyMode = UserSession.GetInstance().User != null && !UserSession.GetInstance().User.accessOperationsSettings;
                 if (readOnlyMode)
                 {
                     dataGridView.ReadOnly = true;
 
-                    string message = $"{ITEM_OPERATION_PLANNING} data is read only.";
+                    string message = $"{selectedTabName} data is read only.";
                     log.LogInfo(message);
                     statusLabel.Text = message;
                 }
@@ -500,10 +502,6 @@ namespace ForecastingModule
                 this.selectedSubTab = selectedSubTabName;
                 log.LogInfo($"Generating Forecast DataGridView for '{selectedSubTabName}' model");
                 generateForecastDataGrid(selectedTab, selectedTabName, selectedSubTabName);
-            }
-            else if (ITEM_MANANGE == selectedSubTabName)
-            {
-                log.LogInfo($"Grid on Manage will be there.");
             }
         }
 
