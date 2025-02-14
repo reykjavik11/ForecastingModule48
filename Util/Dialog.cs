@@ -20,6 +20,9 @@ namespace ForecastingModule.Util
 
             public static Tables OPERATIONS_SETTINGS { get { return new Tables("OperationsSettings"); } }
             public static Tables SALES_CODES { get { return new Tables("SalesCodes"); } }
+            public static Tables USERS { get { return new Tables("Users"); } }
+            public static Tables SUB_TABS { get { return new Tables("SubTabs"); } }
+            public static Tables FORECAST_TABS { get { return new Tables("ParentTabs"); } }
             public override string ToString()
             {
                 return Value;
@@ -29,8 +32,10 @@ namespace ForecastingModule.Util
 
         public static readonly Dictionary<String, String> MANAGE_TABLES_AND_SQL = new Dictionary<String, String> {
             {Tables.OPERATIONS_SETTINGS.Value, $"SELECT * FROM {Tables.OPERATIONS_SETTINGS.Value} order by OPS_DisplayOrder"},
-
-            {Tables.SALES_CODES.Value, $"SELECT * FROM {Tables.SALES_CODES.Value} order by SC_ForecastTab, SC_SalesCode"}
+            {Tables.SALES_CODES.Value, $"SELECT * FROM {Tables.SALES_CODES.Value} order by SC_ForecastTab, SC_SalesCode"},
+            {Tables.USERS.Value, $"SELECT * FROM {Tables.USERS.Value} order by USR_UserName"},
+            {Tables.SUB_TABS.Value, $"SELECT * FROM {Tables.SUB_TABS.Value} order by SUB_ParentTab, SUB_DisplayOrder"},
+            {Tables.FORECAST_TABS.Value, $"SELECT * FROM {Tables.FORECAST_TABS.Value} order by TAB_DisplayOrder"}
         };
 
         public static void showManageTableDialog(string table)

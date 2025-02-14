@@ -72,15 +72,6 @@ namespace ForecastingModule
             this.manageSubTabsButton.Click += OnManageSubTabs_Click;
             flowLayoutPanel.Controls.Add(this.manageSubTabsButton);
 
-            this.manageSalesCodesButton = new Button();
-            this.manageSalesCodesButton.Text = "Manage Sales Codes";
-            this.manageSalesCodesButton.Height = SettingsView.BUTTON_HEIGHT;
-            this.manageSalesCodesButton.Anchor = AnchorStyles.None;
-            this.manageSalesCodesButton.Width = 300;
-            this.manageSalesCodesButton.Font = TEXT_FONT;
-            this.manageSalesCodesButton.Click += OnManageSalesCodes_Click;
-            flowLayoutPanel.Controls.Add(this.manageSalesCodesButton);
-
             this.manageUsersButton = new Button();
             this.manageUsersButton.Text = "Manage Users";
             this.manageUsersButton.Height = SettingsView.BUTTON_HEIGHT;
@@ -89,6 +80,15 @@ namespace ForecastingModule
             this.manageUsersButton.Font = TEXT_FONT;
             this.manageUsersButton.Click += OnManageUsers_Click;
             flowLayoutPanel.Controls.Add(this.manageUsersButton);
+
+            this.manageSalesCodesButton = new Button();
+            this.manageSalesCodesButton.Text = "Manage Sales Codes";
+            this.manageSalesCodesButton.Height = SettingsView.BUTTON_HEIGHT;
+            this.manageSalesCodesButton.Anchor = AnchorStyles.None;
+            this.manageSalesCodesButton.Width = 300;
+            this.manageSalesCodesButton.Font = TEXT_FONT;
+            this.manageSalesCodesButton.Click += OnManageSalesCodes_Click;
+            flowLayoutPanel.Controls.Add(this.manageSalesCodesButton);
         }
 
         private void OnManageSalesCodes_Click(object sender, EventArgs e)
@@ -98,17 +98,17 @@ namespace ForecastingModule
 
         private void OnManageUsers_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("OnManageUsers_Click");
+            runAsync(Tables.USERS.Value);
         }
 
         private void OnManageSubTabs_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("OnManageSubTabs_Click");
+            runAsync(Tables.SUB_TABS.Value);
         }
 
         private  void OnManageForecast_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("OnManageForecast_Click");
+            runAsync(Tables.FORECAST_TABS.Value);
         }
 
         public async void runAsync(string table)
