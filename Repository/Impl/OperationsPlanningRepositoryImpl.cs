@@ -121,56 +121,6 @@ namespace ForecastingModule.Repository.Impl
             return result;
         }
 
-        /*public SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> retrieveExistedOperationsPlanning(string equipmentName)
-        {
-            SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> result = new SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>>();
-            try
-            {
-                using (var connection = new SqlConnection(connectionString))
-                {
-                    connection.Open();
-                    //must be ordering - return structure is linked depend by ordering elements
-                    using (var command = new SqlCommand($"select IsNull(sc.SC_SalesCode, '') as SC_SalesCode, op.OP_Date, IsNull(op.OP_Quantity, 0) as OP_Quantity, IsNull(sc.SC_Model, '') as SC_Model, IsNull(SC_FCPercent, 0) as SC_FCPercent from (select SC_SalesCode, SC_Model, SC_OperationsTab, SC_ForecastTab, SC_FCPercent from [WeilerForecasting].[dbo].[SalesCodes] where SC_BaseFlag=1) sc left join [WeilerForecasting].[dbo].[OperationsSettings] os on os.OPS_Tab = sc.SC_OperationsTab left join [WeilerForecasting].[dbo].[OperationsPlanning] op on op.OP_Model = sc.SC_Model and op.OP_Base = sc.SC_SalesCode and op.OP_Date between DATEFROMPARTS(YEAR(DATEADD(day, os.OPS_NbrDays, GETDATE())), MONTH(DATEADD(day, os.OPS_NbrDays, GETDATE())), 1) and EOMONTH(DATEADD(month, os.OPS_NbrMonths, GETDATE())) left join [WeilerForecasting].[dbo].[SubTabs] st on st.SUB_ParentTab=sc.SC_OperationsTab and sc.SC_Model = st.SUB_SubTabName where sc.SC_OperationsTab='{equipmentName}' or sc.SC_ForecastTab='{equipmentName}' order by st.SUB_DisplayOrder, SC_SalesCode", connection))
-                    {
-                        using (var reader = command.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                string salesCode = reader.GetString(reader.GetOrdinal("SC_SalesCode"));
-
-                                SyncLinkedDictionary<object, object> syncLinkedDictionary = result.Get(salesCode);
-                                if (syncLinkedDictionary == null)//first initialization of subelements
-                                {
-                                    syncLinkedDictionary = new SyncLinkedDictionary<object, object>();
-
-                                    //constant data here
-                                    syncLinkedDictionary.Add(ForecastRepositoryImpl.BASE_FLAG, true);
-                                    syncLinkedDictionary.Add("SC_FCPercent", reader.GetInt32(reader.GetOrdinal("SC_FCPercent")));
-                                    syncLinkedDictionary.Add(SC_MODEL, reader.GetString(reader.GetOrdinal("SC_Model")));
-                                    syncLinkedDictionary.Add("HIDEN_KEYS", new List<string> { "SC_Model" });
-
-                                    result.Add(salesCode, syncLinkedDictionary);
-                                }
-
-                                Nullable<DateTime> nullableDateTime = DataReaderExtensions.GetNullableValue<DateTime>(reader, "OP_Date");
-                                if (nullableDateTime.HasValue)
-                                {
-                                    int quantity = reader.GetInt32(reader.GetOrdinal("OP_Quantity"));
-                                    syncLinkedDictionary.Add(nullableDateTime.Value, quantity);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                log.LogError(ex.StackTrace);
-                throw ex;
-            }
-            return result;
-        }*/
-
         public int save(SyncLinkedDictionary<string, SyncLinkedDictionary<object, object>> data)
         {
             int insertedRows = 0;
