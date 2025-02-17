@@ -97,15 +97,14 @@ namespace ForecastingModule
         {
             try
             {
-                log.LogInfo($"Loaded dymanic Tabs from [TAB_DisplayOrder]: {string.Join(", ", tabList)}");
-
-                tabList.Add(ITEM_OPERATION_PLANNING);
+                tabList.Add(ITEM_OPERATION_PLANNING);//TODO better to move all filling logic and reverse to service TabRepositoryImpl
                 tabList.AddRange(TabRepositoryImpl.Instance.getActiveTabs());
                 tabList.Add(ITEM_MANANGE);
 
                 tabList = new HashSet<string>(tabList).ToList();//cover the case with duplication - avoid duplication
 
                 tabList.Reverse();
+                log.LogInfo($"Loaded dymanic Tabs from [TAB_DisplayOrder]: {string.Join(", ", tabList)}");
             }
             catch (Exception ex)
             {
